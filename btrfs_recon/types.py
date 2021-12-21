@@ -1,0 +1,2 @@
+DevId = int
+PhysicalAddress = int

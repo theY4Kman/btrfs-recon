@@ -8,6 +8,9 @@ authors = ["Zach Kanzler <they4kman@gmail.com>"]
 python = "^3.10"
 construct = "^2.10.67"
 intervaltree = "^3.1.0"
+sqlalchemy = {git = "https://github.com/sqlalchemy/sqlalchemy.git", rev = "1221407"}
+psycopg = {extras = ["binary"], version = "^3.0.7"}
+click = "^8.0.3"
 
 [tool.poetry.dev-dependencies]
 construct-typing = "^0.5.2"
