@@ -6,11 +6,13 @@ authors = ["Zach Kanzler <they4kman@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-construct = "^2.10.67"
-intervaltree = "^3.1.0"
-sqlalchemy = {git = "https://github.com/sqlalchemy/sqlalchemy.git", rev = "1221407"}
-psycopg = {extras = ["binary"], version = "^3.0.7"}
+
 click = "^8.0.3"
+construct = "^2.10.67"
+inflection = "^0.5.1"
+intervaltree = "^3.1.0"
+psycopg = {extras = ["binary"], version = "^3.0.7"}
+sqlalchemy = {git = "https://github.com/sqlalchemy/sqlalchemy.git", rev = "1221407", extras = ["mypy", "asyncio"]}
 
 [tool.poetry.dev-dependencies]
 construct-typing = "^0.5.2"

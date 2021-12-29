@@ -7,7 +7,7 @@ from typing import BinaryIO, Callable, Iterable
 import construct as cs
 from tqdm import tqdm
 
-from btrfs_recon.structure import Header, Item, KeyType, ObjectId, Superblock, TreeNode
+from btrfs_recon.structure import Header, Item, KeyType, ObjectId, Struct, Superblock, TreeNode
 from btrfs_recon.types import DevId, PhysicalAddress
 from btrfs_recon.util.chunk_cache import ChunkTreeCache
 
@@ -16,9 +16,9 @@ def parse_fs(*device_handles: BinaryIO) -> tuple[Superblock, ChunkTreeCache]:
     if not device_handles:
         raise ValueError('Please pass at least one device/image file handle')
 
-    devid_fp_map = {}
+    devid_fp_map: dict[int, BinaryIO] = {}
     for fp in device_handles:
-        superblock = cs.Pointer(0x10000, Superblock).parse_stream(fp)
+        superblock = parse_at(fp, 0x10_000, Superblock)
         dev_item = superblock.dev_item
         devid_fp_map[dev_item.devid] = fp
 
@@ -34,7 +34,7 @@ def parse_fs(*device_handles: BinaryIO) -> tuple[Superblock, ChunkTreeCache]:
     while chunk_tree_queue:
         devid, physical = chunk_tree_queue.popleft()
         fp = devid_fp_map[devid]
-        node = cs.Pointer(physical, TreeNode).parse_stream(fp)
+        node = parse_at(fp, physical, TreeNode)
 
         # print(f'=== CHUNK TREE ITEM: {hex(physical)} ({physical})')
         # print(chunk_tree_item)
@@ -68,18 +68,20 @@ def parse_fs(*device_handles: BinaryIO) -> tuple[Superblock, ChunkTreeCache]:
     # root_tree_queue = deque((root_tree_root_physical,))
     # while root_tree_queue:
     #     physical = root_tree_queue.popleft()
-    #     root_tree_item = cs.Pointer(physical, Header).parse_stream(fs)
+    #     root_tree_item = parse_at(fs, physical, Header)
     #     print(physical)
     #     print(root_tree_item)
 
     return superblock, tree
 
 
-def parse_at(fp, pos, type_, **contextkw):
+def parse_at(fp: BinaryIO, pos: int, type_: cs.Struct | typing.Type[Struct], **contextkw):
+    if issubclass(type_, Struct):
+        type_ = type_.as_struct()
     return cs.Pointer(pos, type_).parse_stream(fp, **contextkw)
 
 
-def pparse_at(fp, pos, type_, **contextkw):
+def pparse_at(fp: BinaryIO, pos: int, type_: cs.Struct | typing.Type[Struct], **contextkw):
     print(parse_at(fp, pos, type_, **contextkw))
 
 
