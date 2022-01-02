@@ -31,6 +31,7 @@ class _StructMeta(type):
             #
             del annotations['phys_start']
             del annotations['phys_end']
+            del annotations['phys_size']
 
         else:
             phys_field = partial(csfield, fields.HexDecInt(cs.Tell))
@@ -41,12 +42,14 @@ class _StructMeta(type):
                 'phys_start': phys_field(),
                 **attrs,
                 'phys_end': phys_field(),
+                'phys_size': csfield(cs.Computed(cs.this.phys_end - cs.this.phys_start)),
 
                 # And add annotations for them
                 '__annotations__': {
                     'phys_start': phys_type,
                     **annotations,
                     'phys_end': phys_type,
+                    'phys_size': phys_type,
                 },
             }
 
@@ -60,13 +63,9 @@ _TYPED_STRUCT_AS_STRUCT_KEY = '__struct'
 
 class Struct(DataclassMixin, metaclass=_StructMeta):
     phys_start: int
-
     # NOTE: this field is moved to last position by _StructMeta
     phys_end: int
-
-    @property
-    def size(self) -> int:
-        return self.phys_end - self.phys_start
+    phys_size: int
 
     @classmethod
     def as_struct(cls) -> cs.Struct:

@@ -40,6 +40,14 @@ class HexAndDecDisplayedInteger(int):
     def __str__(self) -> str:
         return f'0x{self:0{self._num_bytes}{"X" if self._uppercase else "x"}} ({self:d})'
 
+    def __copy__(self) -> 'HexAndDecDisplayedInteger':
+        return HexAndDecDisplayedInteger(self, num_bytes=self._num_bytes, uppercase=self._uppercase)
+
+    def __deepcopy__(self, memo: dict) -> 'HexAndDecDisplayedInteger':
+        copy = self.__copy__()
+        memo[id(self)] = copy
+        return copy
+
 
 class HexDecInt(cs.Hex):
     def _decode(self, obj, context, path):

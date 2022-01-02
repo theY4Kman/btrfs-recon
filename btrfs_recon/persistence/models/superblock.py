@@ -6,7 +6,7 @@ import sqlalchemy.orm as orm
 
 from btrfs_recon import structure
 from btrfs_recon.persistence import fields
-from .base_node import BaseNode
+from .base import BaseStruct
 from .key import Keyed
 
 if TYPE_CHECKING:
@@ -18,7 +18,7 @@ __all__ = [
 ]
 
 
-class Superblock(BaseNode):
+class Superblock(BaseStruct):
     csum = sa.Column(pg.BYTEA, nullable=False)
     fsid = sa.Column(pg.UUID, nullable=False)
 
@@ -60,7 +60,7 @@ class Superblock(BaseNode):
     dev_item_id = sa.Column(sa.ForeignKey('dev_item.id'), nullable=False)
     dev_item = orm.relationship('DevItem')
 
-    sys_chunks = orm.relationship('SysChunk')
+    sys_chunks = orm.relationship('SysChunk', back_populates='superblock')
 
     @classmethod
     def parse_struct(cls, device: 'Device', superblock: structure.Superblock, /) -> dict[str, Any]:
@@ -120,14 +120,9 @@ class Superblock(BaseNode):
         }
 
 
-class SysChunk(Keyed, BaseNode):
+class SysChunk(Keyed, BaseStruct):
     superblock_id = sa.Column(sa.ForeignKey(Superblock.id), nullable=False)
     superblock = orm.relationship(Superblock)
 
     chunk_id = sa.Column(sa.ForeignKey('chunk_item.id'), nullable=False)
-    chunk = orm.relationship('Chunk')
-
-    @classmethod
-    def parse_struct(cls, device: 'Device', sys_chunk: structure.SysChunk, /) -> dict[str, Any]:
-        from .chunk_item import ChunkItem
-        return dict(**sys_chunk.key, chunk=ChunkItem.from_struct(device, sys_chunk.chunk))
+    chunk = orm.relationship('ChunkItem')

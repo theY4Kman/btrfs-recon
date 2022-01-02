@@ -13,6 +13,8 @@ inflection = "^0.5.1"
 intervaltree = "^3.1.0"
 psycopg = {extras = ["binary"], version = "^3.0.7"}
 sqlalchemy = {git = "https://github.com/sqlalchemy/sqlalchemy.git", rev = "1221407", extras = ["mypy", "asyncio"]}
+SQLAlchemy-Utils = "^0.38.2"
+marshmallow-sqlalchemy = "^0.27.0"
 
 [tool.poetry.dev-dependencies]
 construct-typing = "^0.5.2"

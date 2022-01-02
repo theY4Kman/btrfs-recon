@@ -1,11 +1,11 @@
 import sqlalchemy as sa
 import sqlalchemy.dialects.postgresql as pg
 
-from .base import BaseModel
+from .base import BaseStruct
 from .. import fields
 
 
-class DevItem(BaseModel):
+class DevItem(BaseStruct):
     devid = sa.Column(fields.uint8, nullable=False)
     total_bytes = sa.Column(fields.uint8, nullable=False)
     bytes_used = sa.Column(fields.uint8, nullable=False)
