@@ -1,5 +1,6 @@
 from marshmallow import fields
 
+from btrfs_recon import structure
 from btrfs_recon.persistence import DevItem, Superblock, SysChunk
 from .base import StructSchema
 
@@ -13,18 +14,21 @@ __all__ = [
 class DevItemSchema(StructSchema):
     class Meta:
         model = DevItem
+        struct_class = structure.DevItem
 
 
 class SysChunkSchema(StructSchema):
     class Meta:
         model = SysChunk
+        struct_class = structure.SysChunk
 
-    chunk = fields.Nested('btrfs_recon.persistence.serializers.chunk_item.ChunkItemSchema')
+    chunk = fields.Nested('ChunkItemSchema')
 
 
 class SuperblockSchema(StructSchema):
     class Meta:
         model = Superblock
+        struct_class = structure.Superblock
 
     dev_item = fields.Nested(DevItemSchema)
     sys_chunks = fields.Nested(SysChunkSchema, many=True)

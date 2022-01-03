@@ -4,9 +4,9 @@ import typing
 import marshmallow
 from marshmallow import fields, post_load, pre_load
 from marshmallow_sqlalchemy import auto_field, SQLAlchemyAutoSchema
-from marshmallow_sqlalchemy.schema import SQLAlchemyAutoSchemaMeta
+from marshmallow_sqlalchemy.schema import SQLAlchemyAutoSchemaMeta, SQLAlchemyAutoSchemaOpts
 
-from btrfs_recon.persistence import Address
+from btrfs_recon.persistence import Address, BaseStruct
 from btrfs_recon.structure import Struct
 
 __all__ = [
@@ -58,7 +58,29 @@ class AddressSchema(BaseSchema):
     phys_size = fields.Integer()
 
 
+class StructSchemaOpts(SQLAlchemyAutoSchemaOpts):
+    """Records info for translating between DB models and on-disk structures
+
+    Adds the following option:
+     - `struct_class`: The Construct BaseStruct class used to parse the on-disk structure
+     - `version`: An integer to be incremented whenever the Schema class changes its output.
+            This allows rows produced by the Schema to be re-parsed when the Schema changes.
+
+    """
+
+    struct_class: typing.Type[BaseStruct] | None
+    version: int = 0
+
+    def __init__(self, meta, *args, **kwargs):
+        super().__init__(meta, *args, **kwargs)
+        self.struct_class = getattr(meta, 'struct_class', None)
+        self.version = getattr(meta, 'version', self.version)
+
+
 class StructSchema(BaseSchema, SQLAlchemyAutoSchema):
+    OPTIONS_CLASS = StructSchemaOpts
+    opts: StructSchemaOpts
+
     address = fields.Nested(AddressSchema)
 
     @pre_load()
