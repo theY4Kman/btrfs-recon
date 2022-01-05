@@ -13,16 +13,16 @@ class uint(sa.TypeDecorator):
 
 
 class uint1(uint):
-    __visit_name__ = 'uint1'
+    __visit_name__ = 'uint1'  # type: ignore[misc]
 
 
 class uint2(uint):
-    __visit_name__ = 'uint2'
+    __visit_name__ = 'uint2'  # type: ignore[misc]
 
 
 class uint4(uint):
-    __visit_name__ = 'uint4'
+    __visit_name__ = 'uint4'  # type: ignore[misc]
 
 
 class uint8(uint):
-    __visit_name__ = 'uint8'
+    __visit_name__ = 'uint8'  # type: ignore[misc]

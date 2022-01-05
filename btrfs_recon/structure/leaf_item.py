@@ -3,7 +3,7 @@ import construct as cs
 from .base import field, Struct
 from .key import Key, KeyType
 
-__all__ = ['Item']
+__all__ = ['LeafItem']
 
 
 def _get_data_field():
@@ -37,7 +37,7 @@ def _get_data_field():
     return cs.Switch(cs.this.key.ty, key_type_subcon_map)
 
 
-class Item(Struct):
+class LeafItem(Struct):
     key: int = field(Key)
     offset: int = field(cs.Int32ul)
     size: int = field(cs.Int32ul)

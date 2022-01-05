@@ -2,16 +2,16 @@ import construct as cs
 
 from .base import field, Struct
 from .header import Header
-from .item import Item
 from .key import KeyPtr
+from .leaf_item import LeafItem
 
 
 class TreeNode(Struct):
     header: Header = field(Header)
-    items: list[Item] | list[KeyPtr] = field(
+    items: list[LeafItem] | list[KeyPtr] = field(
         cs.IfThenElse(
             cs.this.header.level == 0,
-            Item[cs.this.header.nritems],
+            LeafItem[cs.this.header.nritems],
             KeyPtr[cs.this.header.nritems],
         ),
     )

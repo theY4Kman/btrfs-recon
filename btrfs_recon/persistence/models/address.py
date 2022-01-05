@@ -1,9 +1,16 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import sqlalchemy as sa
 from sqlalchemy import orm as orm
 from sqlalchemy_utils import generic_relationship
 
 from .. import fields
 from .base import BaseModel
+
+if TYPE_CHECKING:
+    from .physical import Device
 
 __all__ = ['Address']
 
@@ -20,7 +27,7 @@ class Address(BaseModel):
     struct_id = sa.Column(sa.Integer, nullable=False)
     struct = generic_relationship(struct_type, struct_id)
 
-    device = orm.relationship('Device')
+    device: orm.Mapped[Device] = orm.relationship('Device')
 
     # TODO
     # filesystem = orm.relationship('Filesystem')

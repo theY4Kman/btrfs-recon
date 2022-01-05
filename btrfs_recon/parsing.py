@@ -7,7 +7,7 @@ from typing import BinaryIO, Callable, Iterable
 import construct as cs
 from tqdm import tqdm
 
-from btrfs_recon.structure import Header, Item, KeyType, ObjectId, Struct, Superblock, TreeNode
+from btrfs_recon.structure import Header, LeafItem, KeyType, ObjectId, Struct, Superblock, TreeNode
 from btrfs_recon.types import DevId, PhysicalAddress
 from btrfs_recon.util.chunk_cache import ChunkTreeCache
 
@@ -160,7 +160,7 @@ def find_nodes(
     return log, find_results()
 
 
-def find_fs_roots(fp: io.FileIO, **kwargs) -> Iterable[tuple[int, Item]]:
+def find_fs_roots(fp: io.FileIO, **kwargs) -> Iterable[tuple[int, LeafItem]]:
     log, results = find_nodes(
         fp, **kwargs, predicate=lambda loc, header: header.level == 0 and header.nritems > 0
     )

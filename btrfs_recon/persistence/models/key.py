@@ -3,6 +3,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import declarative_mixin, declared_attr
 from sqlalchemy_utils import generic_relationship
 
+from btrfs_recon.structure import KeyType
 from . import fields
 from .base import BaseStruct
 
@@ -16,7 +17,7 @@ class Key(BaseStruct):
     id = sa.Column(primary_key=True, autoincrement=True)
 
     objectid = sa.Column(fields.uint8, nullable=False)
-    ty = sa.Column(fields.uint2, nullable=False)
+    ty = sa.Column(sa.Enum(KeyType), nullable=False)
     offset = sa.Column(fields.uint8, nullable=False)
 
     struct_type = sa.Column(sa.String)

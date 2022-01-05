@@ -62,63 +62,6 @@ class Superblock(BaseStruct):
 
     sys_chunks = orm.relationship('SysChunk', back_populates='superblock')
 
-    @classmethod
-    def parse_struct(cls, device: 'Device', superblock: structure.Superblock, /) -> dict[str, Any]:
-        from .dev_item import DevItem
-        return {
-            **super().parse_struct(device, superblock),
-
-            'csum': superblock.csum,
-            'fsid': superblock.fsid,
-            'flags': superblock.flags,
-            'generation': superblock.generation,
-            'root': superblock.root,
-            'chunk_root': superblock.chunk_root,
-            'log_root': superblock.log_root,
-            'log_root_transid': superblock.log_root_transid,
-            'total_bytes': superblock.total_bytes,
-            'bytes_used': superblock.bytes_used,
-            'root_dir_objectid': superblock.root_dir_objectid,
-            'num_devices': superblock.num_devices,
-            'sector_size': superblock.sector_size,
-            'node_size': superblock.node_size,
-            'leafsize': superblock.leafsize,
-            'stripesize': superblock.stripesize,
-            'sys_chunk_array_size': superblock.sys_chunk_array_size,
-            'chunk_root_generation': superblock.chunk_root_generation,
-            'compat_flags': superblock.compat_flags,
-            'compat_ro_flags': superblock.compat_ro_flags,
-            'incompat_flags': superblock.incompat_flags,
-            'csum_type': superblock.csum_type,
-            'root_level': superblock.root_level,
-            'chunk_root_level': superblock.chunk_root_level,
-            'log_root_level': superblock.log_root_level,
-            'label': superblock.label,
-            'cache_generation': superblock.cache_generation,
-            'uuid_tree_generation': superblock.uuid_tree_generation,
-            'metadata_uuid': superblock.metadata_uuid,
-            'dev_item': DevItem(
-                devid=superblock.dev_item.devid,
-                total_bytes=superblock.dev_item.total_bytes,
-                bytes_used=superblock.dev_item.bytes_used,
-                io_align=superblock.dev_item.io_align,
-                io_width=superblock.dev_item.io_width,
-                sector_size=superblock.dev_item.sector_size,
-                type=superblock.dev_item.type,
-                generation=superblock.dev_item.generation,
-                start_offset=superblock.dev_item.start_offset,
-                dev_group=superblock.dev_item.dev_group,
-                seek_speed=superblock.dev_item.seek_speed,
-                bandwidth=superblock.dev_item.bandwidth,
-                uuid=superblock.dev_item.uuid,
-                fsid=superblock.dev_item.fsid,
-            ),
-            'sys_chunks': [
-                SysChunk.from_struct(device, sys_chunk)
-                for sys_chunk in superblock.sys_chunks
-            ],
-        }
-
 
 class SysChunk(Keyed, BaseStruct):
     superblock_id = sa.Column(sa.ForeignKey(Superblock.id), nullable=False)
