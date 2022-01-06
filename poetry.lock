@@ -213,6 +213,17 @@ reference = "1221407"
 resolved_reference = "1221407282f8285318daa34cbe6bd2b13d423212"
 
 [[package]]
+name = "sqlalchemy-repr"
+version = "0.0.2"
+description = "Automatically generates pretty repr of a SQLAlchemy model."
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+SQLAlchemy = "*"
+
+[[package]]
 name = "sqlalchemy-utils"
 version = "0.38.2"
 description = "Various utility functions for SQLAlchemy."
@@ -268,7 +279,7 @@ python-versions = ">=3.6"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "1c89709ded6c1acf5428719f9c00754083e885b4a91c799762e7df8c1e493842"
+content-hash = "aa1cd75a623657bf7ed53e342bb8e482350504946c056b8761b7595d2cf700cc"
 
 [metadata.files]
 click = [
@@ -452,6 +463,10 @@ sortedcontainers = [
     {file = "sortedcontainers-2.4.0.tar.gz", hash = "sha256:25caa5a06cc30b6b83d11423433f65d1f9d76c4c6a0c90e3379eaa43b9bfdb88"},
 ]
 SQLAlchemy = []
+sqlalchemy-repr = [
+    {file = "sqlalchemy-repr-0.0.2.macosx-10.14-x86_64.tar.gz", hash = "sha256:6faa78edd7673effa1656ea0f697d3f1262e40951a8f374cd320758c2e52c32c"},
+    {file = "sqlalchemy_repr-0.0.2-py3-none-any.whl", hash = "sha256:060272575376e8a906e964cf10de5b40fd3f814db9c61e1269cb5cc15befffb2"},
+]
 sqlalchemy-utils = [
     {file = "SQLAlchemy-Utils-0.38.2.tar.gz", hash = "sha256:9e01d6d3fb52d3926fcd4ea4a13f3540701b751aced0316bff78264402c2ceb4"},
     {file = "SQLAlchemy_Utils-0.38.2-py3-none-any.whl", hash = "sha256:622235b1598f97300e4d08820ab024f5219c9a6309937a8b908093f487b4ba54"},

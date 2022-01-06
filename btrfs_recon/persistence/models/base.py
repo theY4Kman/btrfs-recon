@@ -7,6 +7,7 @@ import inflection
 import sqlalchemy as sa
 import sqlalchemy.orm as orm
 from sqlalchemy.orm import declarative_base, declared_attr
+from sqlalchemy_repr import RepresentableBase
 
 if TYPE_CHECKING:
     from .address import Address
@@ -17,7 +18,7 @@ __all__ = [
     'BaseStruct',
 ]
 
-Base = declarative_base()
+Base = declarative_base(cls=RepresentableBase)
 
 
 class BaseModel(Base):
