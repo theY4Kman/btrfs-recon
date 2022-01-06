@@ -80,10 +80,23 @@ class StructSchemaOpts(SQLAlchemyAutoSchemaOpts):
         self.key_type = getattr(meta, 'key_type', self.key_type)
 
 
+class StructSchemaVersionField(fields.Field):
+    """Simply returns the StructSchema's Meta.version"""
+
+    def _bind_to_schema(self, field_name, schema):
+        if not isinstance(schema, StructSchema):
+            raise TypeError('This field can only be placed within StructSchema subclasses.')
+        super()._bind_to_schema(field_name, schema)
+
+    def deserialize(self, value, attr=None, data=None, **kwargs):
+        return self.parent.opts.version
+
+
 class StructSchema(BaseSchema, SQLAlchemyAutoSchema):
     OPTIONS_CLASS = StructSchemaOpts
     opts: StructSchemaOpts
 
+    _version = StructSchemaVersionField()
     address = fields.Nested(AddressSchema)
 
     @pre_load()

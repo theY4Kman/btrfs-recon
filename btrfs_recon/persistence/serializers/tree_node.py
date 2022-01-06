@@ -43,3 +43,4 @@ class LeafItemSchema(StructSchema):
         from . import registry
         if entry := registry.find_by_struct(struct.__class__):
             return entry.schema().load(struct)
+        return None
