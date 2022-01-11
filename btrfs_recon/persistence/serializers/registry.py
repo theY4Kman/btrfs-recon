@@ -27,7 +27,7 @@ class RegistryEntry:
 _registry: dict[StructSchemaType, RegistryEntry] = {}
 _struct_index: dict[StructType, RegistryEntry] = {}
 _model_index: dict[StructModelType, RegistryEntry] = {}
-_key_type_index: dict[structure.KeyType, RegistryEntry]
+_key_type_index: dict[structure.KeyType, RegistryEntry] = {}
 
 
 def register_schema(schema_cls: StructSchemaType) -> None:
@@ -42,12 +42,12 @@ def register_schema(schema_cls: StructSchemaType) -> None:
         assoc_model_schema = _model_index[model_cls]
         raise ValueError(f'{model_cls} is already registered to {assoc_model_schema}')
 
-    if struct_cls in _struct_index:
+    if struct_cls and struct_cls in _struct_index:
         assoc_struct_schema = _struct_index[struct_cls]
         raise ValueError(f'{struct_cls} is already registered to {assoc_struct_schema}')
 
     if key_type is not None and key_type in _key_type_index:
-        assoc_key_type_schema = _struct_index[struct_cls]
+        assoc_key_type_schema = _key_type_index[key_type]
         raise ValueError(f'{key_type} is already registered to {assoc_key_type_schema}')
 
     entry = RegistryEntry(schema=schema_cls, model=model_cls, struct=struct_cls)

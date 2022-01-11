@@ -1,19 +1,20 @@
+from typing import List
 from uuid import UUID
 
 import construct as cs
-from construct_typed import EnumBase, TEnum
+from construct_typed import EnumBase
 
 from . import fields
 from .base import Struct, field
 
 __all__ = [
-    'BlockGroupFlags',
+    'BlockGroupFlag',
     'Stripe',
     'ChunkItem',
 ]
 
 
-class BlockGroupFlags(EnumBase):
+class BlockGroupFlag(EnumBase):
     DATA = 1 << 0
     SYSTEM = 1 << 1
     METADATA = 1 << 2
@@ -37,10 +38,10 @@ class ChunkItem(Struct):
     length: int = field(cs.Int64ul)
     owner: int = field(cs.Int64ul)
     stripe_len: int = field(cs.Int64ul)
-    ty: int = field(TEnum(cs.Int64ul, BlockGroupFlags))
+    ty: int = field(cs.Int64ul)
     io_align: int = field(cs.Int32ul)
     io_width: int = field(cs.Int32ul)
     sector_size: int = field(cs.Int32ul)
     num_stripes: int = field(cs.Int16ul)
     sub_stripes: int = field(cs.Int16ul)
-    stripes: int = field(Stripe[cs.this.num_stripes])
+    stripes: List[Stripe] = field(Stripe[cs.this.num_stripes])

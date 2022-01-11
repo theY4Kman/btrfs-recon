@@ -1,18 +1,25 @@
-import dataclasses
-import typing
+from __future__ import annotations
 
-import marshmallow
-from marshmallow import fields, post_load, pre_load
-from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
+import dataclasses
+from typing import Any, Mapping, Type
+
+import marshmallow.validate
+import marshmallow as ma
+import sqlalchemy as sa
+import sqlalchemy.dialects.postgresql as pg
+from marshmallow import pre_load
+from marshmallow_sqlalchemy import ModelConverter, SQLAlchemyAutoSchema
 from marshmallow_sqlalchemy.schema import SQLAlchemyAutoSchemaMeta, SQLAlchemyAutoSchemaOpts
 
-from btrfs_recon.persistence import Address, BaseStruct
+from btrfs_recon.persistence import Address
+from btrfs_recon.persistence.serializers import fields
 from btrfs_recon.structure import Struct, KeyType
 
 __all__ = [
     'BaseSchema',
     'AddressSchema',
     'StructSchema',
+    'LeafItemDataSchema',
 ]
 
 
@@ -32,6 +39,20 @@ class InheritableMetaSchemaMeta(SQLAlchemyAutoSchemaMeta):
         return super().__new__(mcs, name, bases, attrs)
 
 
+class PostgresModelConverter(ModelConverter):
+    SQLA_TYPE_MAPPING = {
+        **ModelConverter.SQLA_TYPE_MAPPING,
+        sa.Enum: fields.Raw,
+        pg.BYTEA: fields.Raw,
+    }
+
+    def _add_column_kwargs(self, kwargs, column):
+        super()._add_column_kwargs(kwargs, column)
+
+        if isinstance(column.type, sa.Enum) and (validators := kwargs.get('validate')):
+            kwargs['validate'] = [v for v in validators if not isinstance(v, ma.validate.Length)]
+
+
 class BaseSchema(SQLAlchemyAutoSchema, metaclass=InheritableMetaSchemaMeta):
     class Meta:
         # Don't bind Schema to a session
@@ -39,10 +60,37 @@ class BaseSchema(SQLAlchemyAutoSchema, metaclass=InheritableMetaSchemaMeta):
         # Produce model instance when calling load()
         load_instance = True
         # Don't yell when load() is passed fields not declared in Schema
-        unknown = marshmallow.INCLUDE
+        unknown = ma.INCLUDE
+        # Autogenerate correct fields for other types of model columns
+        model_converter = PostgresModelConverter
+
+    # If this Schema invoked through a Nested field, this will be set to the parent Schema
+    nesting_schema: BaseSchema | None = None
+    # And this will be set to the name of the Nested field in the parent Schema
+    nesting_name: str | None = None
+
+    # While load() is executing, this will be filled with the data being deserialized.
+    # When load(many=True) is used, this value will hold a single item from the collection
+    # at any time.
+    processed_data: Mapping[str, Any] | None = None
+
+    def _deserialize(self, data, *, many: bool = False, **kwargs):
+        if many:
+            return super()._deserialize(data, many=many, **kwargs)
+
+        self.processed_data = data
+
+        # Support the passing of the entire data dict to fields declaring data_key='*'
+        if data:
+            data = {**data, '*': data}
+
+        try:
+            return super()._deserialize(data, many=many, **kwargs)
+        finally:
+            self.processed_data = None
 
     @pre_load
-    def _dataclass_to_dict(self, data: dict | Struct, **kwargs) -> dict[str, typing.Any]:
+    def _dataclass_to_dict(self, data: dict | Struct, **kwargs) -> dict[str, Any]:
         if dataclasses.is_dataclass(data):
             data = dataclasses.asdict(data)
         return data
@@ -51,11 +99,13 @@ class BaseSchema(SQLAlchemyAutoSchema, metaclass=InheritableMetaSchemaMeta):
 class AddressSchema(BaseSchema):
     class Meta:
         model = Address
-        exclude = ('struct_id', 'struct_type', 'struct')
+        exclude = ('struct_id', 'struct_type')
 
     device = fields.Function(deserialize=lambda obj, ctx: ctx.get('device'))
     phys = fields.Integer(data_key='phys_start')
     phys_size = fields.Integer()
+
+    struct = fields.ParentInstanceField()
 
 
 class StructSchemaOpts(SQLAlchemyAutoSchemaOpts):
@@ -69,7 +119,7 @@ class StructSchemaOpts(SQLAlchemyAutoSchemaOpts):
 
     """
 
-    struct_class: typing.Type[Struct] | None = None
+    struct_class: Type[Struct] | None = None
     version: int = 0
     key_type: KeyType | None = None
 
@@ -97,16 +147,8 @@ class StructSchema(BaseSchema, SQLAlchemyAutoSchema):
     opts: StructSchemaOpts
 
     _version = StructSchemaVersionField()
-    address = fields.Nested(AddressSchema)
+    address = fields.Nested(AddressSchema, data_key='*')
 
-    @pre_load()
-    def _pre_load(self, data, **kwargs):
-        # Have our AddressSchema read its fields from our own struct
-        data['address'] = data
-        return data
 
-    @post_load()
-    def make_instance_post(self, instance, **kwargs):
-        # Set our generic relationship on our Address FK
-        instance.address.struct = instance
-        return instance
+class LeafItemDataSchema(StructSchema):
+    leaf_item = fields.ParentInstanceField()

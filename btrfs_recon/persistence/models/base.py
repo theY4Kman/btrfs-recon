@@ -14,11 +14,13 @@ from btrfs_recon import structure
 if TYPE_CHECKING:
     from btrfs_recon.persistence.serializers import StructSchema, registry
     from .address import Address
+    from .tree_node import LeafItem
 
 __all__ = [
     'Base',
     'BaseModel',
     'BaseStruct',
+    'BaseLeafItemData',
 ]
 
 Base = declarative_base(cls=RepresentableBase)
@@ -63,3 +65,11 @@ class BaseStruct(BaseModel):
     def get_struct_class(cls) -> Type[structure.Struct]:
         entry = cls.get_registry_entry()
         return entry.struct
+
+
+class BaseLeafItemData(BaseStruct):
+    """Base model for all items specified in leaf nodes"""
+    __abstract__ = True
+
+    leaf_item_id: declared_attr[int] = declared_attr(lambda cls: sa.Column(sa.ForeignKey('leaf_item.id'), nullable=False))
+    leaf_item: declared_attr[LeafItem] = declared_attr(lambda cls: orm.relationship('LeafItem'))

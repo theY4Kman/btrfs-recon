@@ -1,7 +1,6 @@
-from marshmallow import fields
-
 from btrfs_recon import structure
 from btrfs_recon.persistence import DevItem, Superblock, SysChunk
+from . import fields
 from .base import StructSchema
 
 __all__ = [

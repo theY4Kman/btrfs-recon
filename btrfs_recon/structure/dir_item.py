@@ -11,19 +11,19 @@ __all__ = [
 
 
 class DirEntryType(EnumBase):
-    Unknown = 0
-    RegFile = 1
-    Dir = 2
-    Chrdev = 3
-    Blkdev = 4
-    Fifo = 5
-    Sock = 6
-    Symlink = 7
-    Xattr = 8
+    UNKNOWN = 0
+    REG_FILE = 1
+    DIR = 2
+    CHRDEV = 3
+    BLKDEV = 4
+    FIFO = 5
+    SOCK = 6
+    SYMLINK = 7
+    XATTR = 8
 
 
 class DirItem(Struct):
-    location: int = field(Key)
+    location: Key = field(Key)
     transid: int = field(cs.Int64ul)
     data_len: int = field(cs.Int16ul)
     name_len: int = field(cs.Int16ul)

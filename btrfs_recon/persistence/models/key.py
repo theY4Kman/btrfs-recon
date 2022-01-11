@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sqlalchemy.orm as orm
 import sqlalchemy as sa
 from sqlalchemy.orm import declarative_mixin, declared_attr
@@ -14,8 +16,6 @@ __all__ = [
 
 
 class Key(BaseStruct):
-    id = sa.Column(primary_key=True, autoincrement=True)
-
     objectid = sa.Column(fields.uint8, nullable=False)
     ty = sa.Column(sa.Enum(KeyType), nullable=False)
     offset = sa.Column(fields.uint8, nullable=False)
@@ -32,5 +32,5 @@ class Key(BaseStruct):
 
 @declarative_mixin
 class Keyed:
-    key_id = declared_attr(lambda cls: sa.Column(sa.ForeignKey(Key.id), nullable=False))
-    key = declared_attr(lambda cls: orm.relationship(Key, lazy='joined'))
+    key_id: declared_attr[int] = declared_attr(lambda cls: sa.Column(sa.ForeignKey(Key.id), nullable=False))
+    key: declared_attr[Key] = declared_attr(lambda cls: orm.relationship(Key, lazy='joined'))

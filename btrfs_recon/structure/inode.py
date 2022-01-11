@@ -7,13 +7,13 @@ from . import fields
 from .base import field, Struct
 
 __all__ = [
-    'InodeItemFlags',
+    'InodeItemFlag',
     'InodeItem',
     'InodeRef',
 ]
 
 
-class InodeItemFlags(EnumBase):
+class InodeItemFlag(EnumBase):
     NODATASUM = (1 << 0)
     NODATACOW = (1 << 1)
     READONLY = (1 << 2)
@@ -39,7 +39,7 @@ class InodeItem(Struct):
     gid: int = field(cs.Int32ul)
     mode: int = field(cs.Int32ul)
     rdev: int = field(cs.Int64ul)
-    flags: int = field(TEnum(cs.Int64ul, InodeItemFlags))
+    flags: InodeItemFlag = field(TEnum(cs.Int64ul, InodeItemFlag))
 
     sequence: int = field(cs.Int64ul, 'modification sequence number for NFS')
 
