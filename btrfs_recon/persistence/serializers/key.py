@@ -12,4 +12,5 @@ class KeySchema(StructSchema):
         model = models.Key
         struct_class = structure.Key
 
+    ty = fields.Raw()
     struct = fields.ParentInstanceField()

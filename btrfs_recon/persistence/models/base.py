@@ -28,6 +28,7 @@ Base = declarative_base(cls=RepresentableBase)
 
 class BaseModel(Base):
     __abstract__ = True
+    __table__: sa.Table
 
     @declared_attr
     def __tablename__(cls) -> str:

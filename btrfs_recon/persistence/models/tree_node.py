@@ -27,7 +27,7 @@ class TreeNode(BaseStruct):
     nritems = sa.Column(fields.uint4, nullable=False)
     level = sa.Column(fields.uint1, nullable=False)
 
-    is_leaf: orm.Mapped[bool] = sa.Column(sa.Computed(level == 0), nullable=False)
+    is_leaf: orm.Mapped[bool] = sa.Column(sa.Computed(level == 0), type_=sa.Boolean, nullable=False)
 
     leaf_items: orm.Mapped[LeafItem] = orm.relationship('LeafItem', back_populates='parent', uselist=True)
     key_ptrs: orm.Mapped[KeyPtr] = orm.relationship('KeyPtr', foreign_keys='KeyPtr.parent_id', back_populates='parent', uselist=True)

@@ -101,11 +101,15 @@ class AddressSchema(BaseSchema):
         model = Address
         exclude = ('struct_id', 'struct_type')
 
-    device = fields.Function(deserialize=lambda obj, ctx: ctx.get('device'))
     phys = fields.Integer(data_key='phys_start')
     phys_size = fields.Integer()
 
     struct = fields.ParentInstanceField()
+
+    @ma.post_load
+    def make_instance_post(self, instance: Address, **kwargs):
+        instance.device = self.context['device']
+        return instance
 
 
 class StructSchemaOpts(SQLAlchemyAutoSchemaOpts):

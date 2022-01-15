@@ -21,6 +21,7 @@ class SysChunkSchema(StructSchema):
         model = SysChunk
         struct_class = structure.SysChunk
 
+    key = fields.Nested('KeySchema')
     chunk = fields.Nested('ChunkItemSchema')
 
 

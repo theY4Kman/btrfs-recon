@@ -1,4 +1,11 @@
+from typing import Any
+
+import psycopg
 import sqlalchemy as sa
+from psycopg import postgres
+from psycopg.types import TypeInfo
+from psycopg.types.numeric import _NumberDumper, IntLoader
+from sqlalchemy.dialects.postgresql.psycopg import _PGInteger
 from sqlalchemy.ext.compiler import compiles
 
 __all__ = [
@@ -9,8 +16,31 @@ __all__ = [
 ]
 
 
+def init_dbapi_types(dbapi_conn: psycopg.Connection):
+    for typename in 'uint1', 'uint2', 'uint4', 'uint8':
+        t = TypeInfo.fetch(dbapi_conn, typename)
+        if t is None:
+            raise RuntimeError(
+                f'Unable to fetch {typename} type from Postgres. '
+                f'Has the pguint extension been installed?'
+            )
+
+        class UintDumper(_NumberDumper):
+            oid = t.oid
+
+        postgres.adapters.register_dumper(int, UintDumper)
+        postgres.adapters.register_loader(t.oid, IntLoader)
+
+
+class PGUnsignedInteger(_PGInteger):
+    render_bind_cast = False
+
+
 class uint(sa.TypeDecorator):
-    impl = sa.Integer
+    impl = PGUnsignedInteger
+
+    def bind_expression(self, bindparam: Any) -> Any:
+        return sa.cast(bindparam, self.__class__)
 
 
 class uint1(uint):

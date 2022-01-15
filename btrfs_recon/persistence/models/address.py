@@ -23,8 +23,8 @@ class Address(BaseModel):
     phys_size = sa.Column(fields.uint8, nullable=False)
     bytenr = sa.Column(fields.uint8)
 
-    struct_type = sa.Column(sa.String, nullable=False)
-    struct_id = sa.Column(sa.Integer, nullable=False)
+    struct_type = sa.Column(sa.String)
+    struct_id = sa.Column(sa.Integer)
     struct = generic_relationship(struct_type, struct_id)
 
     device: orm.Mapped[Device] = orm.relationship('Device')
@@ -33,5 +33,5 @@ class Address(BaseModel):
     # filesystem = orm.relationship('Filesystem')
 
     __table_args__ = (
-        sa.UniqueConstraint(device_id, phys, name='uniq_physically_addressed'),
+        sa.UniqueConstraint(device_id, phys, phys_size, name='uniq_physically_addressed'),
     )

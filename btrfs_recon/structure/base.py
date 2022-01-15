@@ -1,12 +1,17 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from functools import partial
-from typing import Any, Callable, Optional, Type
+from typing import Any, Callable, Optional, Type, TYPE_CHECKING
 
 import construct as cs
 from construct_typed import Construct, Context, csfield, DataclassMixin, DataclassStruct
 from construct_typed.generic_wrapper import ParsedType
 
 from . import fields
+
+if TYPE_CHECKING:
+    from btrfs_recon.persistence import models, serializers
 
 __all__ = ['Struct', 'field']
 
@@ -79,6 +84,22 @@ class Struct(DataclassMixin, metaclass=_StructMeta):
     @classmethod
     def sizeof(cls, **contextkw) -> int:
         return cls.as_struct().sizeof(**contextkw)
+
+    @classmethod
+    def get_schema_class(cls) -> Type[serializers.StructSchema] | None:
+        from btrfs_recon.persistence import serializers
+        if entry := serializers.registry.find_by_struct(cls):
+            return entry.schema
+
+    def to_model(
+        self, *, session=None, instance=None, context: dict | None = None
+    ) -> models.BaseStruct:
+        schema_cls = self.get_schema_class()
+        if not schema_cls:
+            raise ValueError(f'No schema class configured for {self.__class__.__name__}')
+
+        schema = schema_cls(context=context)
+        return schema.load(self, session=session, instance=instance)
 
 
 def field(
