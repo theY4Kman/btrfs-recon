@@ -10,12 +10,14 @@ btrfs-recon = "btrfs_recon.cli:cli"
 [tool.poetry.dependencies]
 python = "^3.10"
 
+alembic = "^1.7.5"
 anyio = "^3.5.0"
 asyncclick = "^8.0.3.1"
 construct = "^2.10.67"
 inflection = "^0.5.1"
 intervaltree = "^3.1.0"
 psycopg = {extras = ["binary"], version = "^3.0.7"}
+python-dateutil = "^2.8.2"
 sqlalchemy = {url = "https://github.com/sqlalchemy/sqlalchemy/tarball/18c6b74562680a15544cd51eaf236ec52d069783"}
 sqlalchemy-repr = "^0.0.2"
 SQLAlchemy-Utils = "^0.38.2"

@@ -1,6 +1,9 @@
 import uuid
+from pathlib import Path
 from typing import BinaryIO
 
+import alembic.command
+import alembic.config
 import asyncclick as click
 import asyncclick.decorators
 import sqlalchemy as sa
@@ -10,6 +13,9 @@ import btrfs_recon.db
 from btrfs_recon import structure
 from btrfs_recon.parsing import parse_at
 from btrfs_recon.persistence import models
+
+PROJECT_ROOT = Path(__file__).parent.resolve()
+ALEMBIC_CFG_PATH = PROJECT_ROOT / 'alembic.ini'
 
 
 @click.group()
@@ -46,6 +52,9 @@ async def init(session: AsyncSession):
     conn = await session.connection()
     await conn.run_sync(models.BaseModel.metadata.create_all)
     await session.commit()
+
+    alembic_cfg = alembic.config.Config(str(ALEMBIC_CFG_PATH))
+    alembic.command.stamp(alembic_cfg, 'head')
 
 
 @db.group()
