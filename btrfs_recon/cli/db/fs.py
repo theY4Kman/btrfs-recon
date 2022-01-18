@@ -1,65 +1,17 @@
 import uuid
-from pathlib import Path
-from typing import BinaryIO
 
-import alembic.command
-import alembic.config
 import asyncclick as click
-import asyncclick.decorators
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import btrfs_recon.db
 from btrfs_recon import structure
-from btrfs_recon.parsing import parse_at
 from btrfs_recon.persistence import models
-
-PROJECT_ROOT = Path(__file__).parent.resolve()
-ALEMBIC_CFG_PATH = PROJECT_ROOT / 'alembic.ini'
-
-
-@click.group()
-def cli():
-    pass
-
-
-@cli.command()
-@click.argument('devices', nargs=-1, type=click.File('rb'), metavar='<device/image>')
-def list_superblocks(devices: tuple[BinaryIO]):
-    for device in devices:
-        click.echo(f'# {device.name}')
-
-        superblock = parse_at(device, 0x10000, structure.Superblock)
-        click.echo(str(superblock))
-
-        click.echo('\n')
-
-
-@cli.group()
-@click.pass_context
-async def db(ctx: click.Context):
-    ctx.meta['session'] = await ctx.enter_async_context(btrfs_recon.db.Session())
-    ctx.meta['sync_session'] = ctx.enter_context(btrfs_recon.db.SyncSession())
-
-
-pass_session = asyncclick.decorators.pass_meta_key('session')
-pass_sync_session = asyncclick.decorators.pass_meta_key('sync_session')
-
-
-@db.command()
-@pass_session
-async def init(session: AsyncSession):
-    conn = await session.connection()
-    await conn.run_sync(models.BaseModel.metadata.create_all)
-    await session.commit()
-
-    alembic_cfg = alembic.config.Config(str(ALEMBIC_CFG_PATH))
-    alembic.command.stamp(alembic_cfg, 'head')
+from .base import db, pass_session
 
 
 @db.group()
 def fs():
-    pass
+    """Interact with the filesystem structures stored in the database"""
 
 
 async def _print_fs(fs: models.Filesystem):
