@@ -28,6 +28,8 @@ greenlet = "!=0.4.17"
 [tool.poetry.dev-dependencies]
 construct-typing = "^0.5.2"
 mypy = "^0.910"
+nest-asyncio = "^1.5.4"
+sqlparse = "^0.4.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

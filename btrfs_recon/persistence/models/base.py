@@ -6,6 +6,7 @@ from typing import Type, TYPE_CHECKING
 import inflection
 import sqlalchemy as sa
 import sqlalchemy.orm as orm
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import declarative_base, declared_attr
 from sqlalchemy_repr import RepresentableBase
 
@@ -66,6 +67,10 @@ class BaseStruct(BaseModel):
     def get_struct_class(cls) -> Type[structure.Struct]:
         entry = cls.get_registry_entry()
         return entry.struct
+
+    async def merge_into(self, session: AsyncSession) -> None:
+        """Add this model and any related models to session, updating any rows with dupe Address"""
+        # TODO — something something Mapper.relationships
 
 
 class BaseLeafItemData(BaseStruct):
