@@ -66,7 +66,9 @@ class BaseSchema(SQLAlchemyAutoSchema, metaclass=InheritableMetaSchemaMeta):
 
     # If this Schema invoked through a Nested field, this will be set to the parent Schema
     nesting_schema: BaseSchema | None = None
-    # And this will be set to the name of the Nested field in the parent Schema
+    # This will be set to the rootmost parent Schema
+    root_schema: BaseSchema | None = None
+    # This will be set to the name of the Nested field in the parent Schema
     nesting_name: str | None = None
 
     # While load() is executing, this will be filled with the data being deserialized.

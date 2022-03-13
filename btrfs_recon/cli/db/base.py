@@ -15,8 +15,8 @@ __all__ = [
 @click.pass_context
 async def db(ctx: click.Context):
     """Interact with the structures stored in the database"""
-    ctx.meta['session'] = await ctx.enter_async_context(btrfs_recon.db.Session())
-    ctx.meta['sync_session'] = ctx.enter_context(btrfs_recon.db.SyncSession())
+    ctx.meta['session'] = await ctx.with_async_resource(btrfs_recon.db.Session())
+    ctx.meta['sync_session'] = ctx.with_resource(btrfs_recon.db.SyncSession())
 
 
 pass_session = asyncclick.decorators.pass_meta_key('session')

@@ -5,7 +5,6 @@ import uuid
 import sqlalchemy.orm as orm
 import sqlalchemy as sa
 import sqlalchemy.dialects.postgresql as pg
-from sqlalchemy_utils import generic_relationship
 
 from .base import BaseStruct
 from .key import Keyed
@@ -54,4 +53,4 @@ class LeafItem(Keyed, BaseStruct):
 
     struct_type = sa.Column(sa.String, nullable=False)
     struct_id = sa.Column(sa.Integer, nullable=False)
-    struct = generic_relationship(struct_type, struct_id)
+    struct = fields.generic_relationship(struct_type, struct_id)

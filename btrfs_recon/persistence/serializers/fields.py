@@ -21,6 +21,7 @@ class Nested(ma.fields.Nested):  # type: ignore[no-redef]
         if not self._schema:
             schema: BaseSchema = super().schema
             schema.nesting_schema = self.parent
+            schema.root_schema = getattr(self.parent, 'root_schema', self.parent)
             schema.nesting_name = self.name
         return self._schema
 
@@ -66,9 +67,6 @@ class ParentInstanceField(Field):
 
     @ma.post_load()
     def set_parent_instance(self, instance, *, many: bool = False, **kwargs):
-        if many:
-            return instance
-
         # XXX (zkanzler): does this need to account for a load name other than the field name?
         child_instance = getattr(instance, self.parent.nesting_name)
         setattr(child_instance, self.name, instance)

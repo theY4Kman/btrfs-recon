@@ -5,6 +5,7 @@ from typing import Type, TYPE_CHECKING
 
 import inflection
 import sqlalchemy as sa
+import sqlalchemy.event
 import sqlalchemy.orm as orm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import declarative_base, declared_attr

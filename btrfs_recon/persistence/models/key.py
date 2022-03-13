@@ -3,7 +3,6 @@ from __future__ import annotations
 import sqlalchemy.orm as orm
 import sqlalchemy as sa
 from sqlalchemy.orm import declarative_mixin, declared_attr
-from sqlalchemy_utils import generic_relationship
 
 from btrfs_recon.structure import KeyType
 from . import fields
@@ -22,7 +21,7 @@ class Key(BaseStruct):
 
     struct_type = sa.Column(sa.String)
     struct_id = sa.Column(sa.Integer)
-    struct = generic_relationship(struct_type, struct_id)
+    struct = fields.generic_relationship(struct_type, struct_id)
 
     __table_args__ = (
         # Enforce a one-to-one rel between a key and the struct it's attached to
