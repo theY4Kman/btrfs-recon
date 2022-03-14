@@ -21,8 +21,9 @@ class Nested(ma.fields.Nested):  # type: ignore[no-redef]
         if not self._schema:
             schema: BaseSchema = super().schema
             schema.nesting_schema = self.parent
-            schema.root_schema = getattr(self.parent, 'root_schema', self.parent)
+            schema.root_schema = getattr(self.parent, 'root_schema', None) or self.parent
             schema.nesting_name = self.name
+            schema._session = self.parent.session
         return self._schema
 
 

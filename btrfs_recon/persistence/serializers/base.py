@@ -1,19 +1,24 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Mapping, Type
+from typing import Any, Mapping, TYPE_CHECKING, Type
 
-import marshmallow.validate
 import marshmallow as ma
+import marshmallow.validate
 import sqlalchemy as sa
 import sqlalchemy.dialects.postgresql as pg
+import sqlalchemy.event
+import sqlalchemy.orm as orm
 from marshmallow import pre_load
 from marshmallow_sqlalchemy import ModelConverter, SQLAlchemyAutoSchema
 from marshmallow_sqlalchemy.schema import SQLAlchemyAutoSchemaMeta, SQLAlchemyAutoSchemaOpts
 
 from btrfs_recon.persistence import Address
 from btrfs_recon.persistence.serializers import fields
-from btrfs_recon.structure import Struct, KeyType
+from btrfs_recon.structure import KeyType, Struct
+
+if TYPE_CHECKING:
+    from btrfs_recon.persistence import BaseStruct
 
 __all__ = [
     'BaseSchema',
@@ -111,6 +116,7 @@ class AddressSchema(BaseSchema):
     @ma.post_load
     def make_instance_post(self, instance: Address, **kwargs):
         instance.device = self.context['device']
+        instance.device_id = instance.device.id
         return instance
 
 
@@ -154,6 +160,66 @@ class StructSchema(BaseSchema, SQLAlchemyAutoSchema):
 
     _version = StructSchemaVersionField()
     address = fields.Nested(AddressSchema, data_key='*')
+
+    @ma.post_load()
+    def post_make_instance_upsert_address(self, instance, *, many: bool = False, **kwargs):
+        _TRACKED_STRUCTS.append(instance)
+        return instance
+
+
+_TRACKED_STRUCTS: list[BaseStruct] = []
+
+
+@sa.event.listens_for(orm.Session, 'before_flush')
+def before_flush(session, flush_context, instances):
+    # 1. Grab all Addresses of tracked structs
+    address_key = lambda addr: (
+        int(addr.device_id or addr.device.id),
+        int(addr.phys),
+        int(addr.phys_size),
+    )
+    address_struct_map = {
+        address_key(struct.address): struct
+        for struct in reversed(_TRACKED_STRUCTS)
+    }
+    _TRACKED_STRUCTS.clear()
+
+    # 2. Construct query to select all address rows with matching contents
+    where_clauses = [
+        (Address.device_id == device_id)
+        & (Address.phys == phys)
+        & (Address.phys_size == phys_size)
+        for device_id, phys, phys_size in address_struct_map
+    ]
+    q = sa.select(Address).filter(sa.or_(*where_clauses))
+    matching_addresses = session.execute(q).scalars()
+
+    to_delete = []
+    for address in matching_addresses:
+        struct = address_struct_map[address_key(address)]
+
+        # If existing Address row has same struct_type, use the existing Address in the matching
+        # Struct, and change the Struct's INSERT to an UPDATE
+        if type(struct).__name__ == address.struct_type:
+            # Since we'll be using the exact same existing address row, with no updates,
+            # we completely remove and stop tracking our proposed Address instance
+            session.expunge(struct.address)
+
+            # We still want to track our Struct, as it may have changes requiring updates,
+            # but it should no longer be considered "new", and instead should just be marked
+            # dirty.
+            session._new.pop(orm.attributes.instance_state(struct))
+            orm.attributes.flag_dirty(struct)
+
+            orm.attributes.set_committed_value(struct, 'id', address.struct_id)
+            orm.attributes.set_committed_value(struct, 'address', address)
+
+        # If the existing Address row has a differing struct_type, we're superseding it, not
+        # updating. So, delete the existing Address row, which will CASCADE to its referring Struct
+        else:
+            to_delete.append(address.pk)
+
+    session.execute(sa.delete(Address).filter(Address.id.in_(to_delete)))
 
 
 class LeafItemDataSchema(StructSchema):

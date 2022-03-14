@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Type, TYPE_CHECKING
+from typing import TYPE_CHECKING, Type
 
 import inflection
 import sqlalchemy as sa
-import sqlalchemy.event
 import sqlalchemy.orm as orm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import declarative_base, declared_attr
@@ -39,7 +38,7 @@ class BaseModel(Base):
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
 
     created_at = sa.Column(sa.DateTime, server_default=sa.func.now(), nullable=False)
-    updated_at = sa.Column(sa.DateTime, server_default=sa.func.now(), onupdate=datetime.utcnow(), nullable=False)
+    updated_at = sa.Column(sa.DateTime, server_default=sa.func.now(), onupdate=datetime.utcnow, nullable=False)
 
 
 class BaseStruct(BaseModel):
