@@ -27,10 +27,10 @@ class InodeItem(BaseLeafItemData):
 
     sequence = sa.Column(fields.uint8, nullable=False, doc='modification sequence number for NFS')
 
-    atime = sa.Column(sa.DateTime, nullable=False)
-    ctime = sa.Column(sa.DateTime, nullable=False)
-    mtime = sa.Column(sa.DateTime, nullable=False)
-    otime = sa.Column(sa.DateTime, nullable=False)
+    atime = sa.Column(sa.DateTime)
+    ctime = sa.Column(sa.DateTime)
+    mtime = sa.Column(sa.DateTime)
+    otime = sa.Column(sa.DateTime)
 
     # Individual boolean columns for each flag value
     for _flag in structure.InodeItemFlag:

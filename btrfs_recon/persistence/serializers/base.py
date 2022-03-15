@@ -9,11 +9,12 @@ import sqlalchemy as sa
 import sqlalchemy.dialects.postgresql as pg
 import sqlalchemy.event
 import sqlalchemy.orm as orm
-from marshmallow import pre_load
+from marshmallow import fields as ma_fields, pre_load
 from marshmallow_sqlalchemy import ModelConverter, SQLAlchemyAutoSchema
 from marshmallow_sqlalchemy.schema import SQLAlchemyAutoSchemaMeta, SQLAlchemyAutoSchemaOpts
 
 from btrfs_recon.persistence import Address
+from btrfs_recon.persistence.fields import uint8
 from btrfs_recon.persistence.serializers import fields
 from btrfs_recon.structure import KeyType, Struct
 
@@ -47,8 +48,11 @@ class InheritableMetaSchemaMeta(SQLAlchemyAutoSchemaMeta):
 class PostgresModelConverter(ModelConverter):
     SQLA_TYPE_MAPPING = {
         **ModelConverter.SQLA_TYPE_MAPPING,
-        sa.Enum: fields.Raw,
+        sa.Enum: fields.NamedEnum,
         pg.BYTEA: fields.Raw,
+        # NOTE: date/time fields are already converted to datetime objects
+        sa.DateTime: fields.Raw,
+        sa.Date: fields.Raw,
     }
 
     def _add_column_kwargs(self, kwargs, column):
@@ -70,16 +74,24 @@ class BaseSchema(SQLAlchemyAutoSchema, metaclass=InheritableMetaSchemaMeta):
         model_converter = PostgresModelConverter
 
     # If this Schema invoked through a Nested field, this will be set to the parent Schema
-    nesting_schema: BaseSchema | None = None
+    nesting_schema: BaseSchema | None
     # This will be set to the rootmost parent Schema
-    root_schema: BaseSchema | None = None
+    root_schema: BaseSchema | None
     # This will be set to the name of the Nested field in the parent Schema
-    nesting_name: str | None = None
+    nesting_name: str | None
 
     # While load() is executing, this will be filled with the data being deserialized.
     # When load(many=True) is used, this value will hold a single item from the collection
     # at any time.
-    processed_data: Mapping[str, Any] | None = None
+    processed_data: Mapping[str, Any] | None
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.nesting_schema = None
+        self.root_schema = None
+        self.nesting_name = None
+        self.processed_data = None
+        self._parent_instance_fields = []
 
     def _deserialize(self, data, *, many: bool = False, **kwargs):
         if many:
@@ -96,11 +108,18 @@ class BaseSchema(SQLAlchemyAutoSchema, metaclass=InheritableMetaSchemaMeta):
         finally:
             self.processed_data = None
 
-    @pre_load
+    @ma.pre_load
     def _dataclass_to_dict(self, data: dict | Struct, **kwargs) -> dict[str, Any]:
         if dataclasses.is_dataclass(data):
             data = dataclasses.asdict(data)
         return data
+
+    @ma.post_load
+    def make_instance_post_fulfill_parent_instance_fields(self, instance, **kwargs):
+        for field, child_field in self._parent_instance_fields:
+            if child := getattr(instance, field):
+                setattr(child, child_field, instance)
+        return instance
 
 
 class AddressSchema(BaseSchema):
@@ -172,6 +191,9 @@ _TRACKED_STRUCTS: list[BaseStruct] = []
 
 @sa.event.listens_for(orm.Session, 'before_flush')
 def before_flush(session, flush_context, instances):
+    if not _TRACKED_STRUCTS:
+        return
+
     # 1. Grab all Addresses of tracked structs
     address_key = lambda addr: (
         int(addr.device_id or addr.device.id),
@@ -185,18 +207,32 @@ def before_flush(session, flush_context, instances):
     _TRACKED_STRUCTS.clear()
 
     # 2. Construct query to select all address rows with matching contents
-    where_clauses = [
-        (Address.device_id == device_id)
-        & (Address.phys == phys)
-        & (Address.phys_size == phys_size)
-        for device_id, phys, phys_size in address_struct_map
-    ]
-    q = sa.select(Address).filter(sa.or_(*where_clauses))
-    matching_addresses = session.execute(q).scalars()
+    values = sa.values(
+        sa.column('device_id', sa.Integer),
+        sa.column('phys', uint8),
+        sa.column('phys_size', uint8),
+        name='address_input',
+    ).data(address_struct_map.keys())
+    q = (
+        sa.select(
+            Address.device_id,
+            Address.phys,
+            Address.phys_size,
+            Address.struct_type,
+            Address.struct_id,
+        )
+        .join(values, onclause=(
+            (Address.device_id == values.c.device_id)
+            & (Address.phys == values.c.phys)
+            & (Address.phys_size == values.c.phys_size)
+        ))
+    )
+    matching_addresses = session.execute(q)
 
     to_delete = []
     for address in matching_addresses:
-        struct = address_struct_map[address_key(address)]
+        if not (struct := address_struct_map.get(address_key(address))):
+            continue
 
         # If existing Address row has same struct_type, use the existing Address in the matching
         # Struct, and change the Struct's INSERT to an UPDATE
@@ -208,7 +244,7 @@ def before_flush(session, flush_context, instances):
             # We still want to track our Struct, as it may have changes requiring updates,
             # but it should no longer be considered "new", and instead should just be marked
             # dirty.
-            session._new.pop(orm.attributes.instance_state(struct))
+            session._new.pop(orm.attributes.instance_state(struct), None)
             orm.attributes.flag_dirty(struct)
 
             orm.attributes.set_committed_value(struct, 'id', address.struct_id)
@@ -217,7 +253,8 @@ def before_flush(session, flush_context, instances):
         # If the existing Address row has a differing struct_type, we're superseding it, not
         # updating. So, delete the existing Address row, which will CASCADE to its referring Struct
         else:
-            to_delete.append(address.pk)
+            to_delete.append(address.id)
+            session.expunge(address)
 
     session.execute(sa.delete(Address).filter(Address.id.in_(to_delete)))
 

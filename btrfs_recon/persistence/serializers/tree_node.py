@@ -51,7 +51,7 @@ class LeafItemSchema(StructSchema):
 
     parent = fields.ParentInstanceField()
     key = fields.Nested('KeySchema')
-    struct = fields.Method(deserialize='load_struct', data_key='data')
+    struct = fields.Method(deserialize='load_struct', data_key='data', allow_none=True)
 
     def load_struct(self, data: dict[str, Any]) -> models.BaseStruct | None:
         from btrfs_recon.persistence.serializers import registry
@@ -60,6 +60,7 @@ class LeafItemSchema(StructSchema):
         if entry := registry.find_by_key_type(key_type):
             field = fields.Nested(entry.schema)
             field._bind_to_schema('struct', self)
-            return field._deserialize(data, None, None)
+            value = field._deserialize(data, None, None)
+            return value
 
         return None

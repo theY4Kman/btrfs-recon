@@ -1,12 +1,15 @@
 import uuid
+from typing import Collection
 
 import asyncclick as click
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from btrfs_recon import structure
-from btrfs_recon.persistence import models
+from btrfs_recon.parsing import find_nodes, parse_at
+from btrfs_recon.persistence import Filesystem, models
 from .base import db, pass_session
+from ..types import HEX_DEC_INT
 
 
 @db.group()
@@ -70,4 +73,58 @@ async def sync_fs(session: AsyncSession, label: str):
         raise click.exceptions.Exit(code=2)
 
     fs.fsid = next(iter(encountered_fsids))
+    await session.commit()
+
+
+@fs.command(name='scan')
+@click.option('-l', '--label', help='The unique label for the filesystem')
+@click.option('-d', '--devid', type=int, multiple=True,
+              help='Limit scan to device with specified devid')
+@click.option('-a', '--alignment', type=int, default=0x10_000)
+@click.option('-s', '--start', type=HEX_DEC_INT, default=None)
+@click.option('--reverse/--forward', type=bool, default=True)
+@pass_session
+async def scan_fs(
+    session: AsyncSession,
+    label: str,
+    alignment: int,
+    start: int,
+    reverse: bool,
+    devid: Collection[int],
+):
+    """Scan a filesystem for aligned records"""
+    q = sa.select(models.Filesystem).filter_by(label=label)
+    fs: Filesystem = (await session.execute(q)).scalar_one()
+
+    for device in fs.devices:
+        # TODO: fix uint sqla type, so it actually returns an int :|
+        if devid and int(device.devid) not in devid:
+            continue
+
+        with device.open(read=True) as fp:
+            log, headers = find_nodes(
+                fp,
+                fsid=fs.fsid,
+                alignment=alignment,
+                start_loc=start,
+                reversed=reverse,
+            )
+            for loc, header in headers:
+                tree_node = parse_at(fp, loc, structure.TreeNode)
+
+                try:
+                    instance = tree_node.to_model(context={'device': device})
+                except ValueError:
+                    continue
+                else:
+                    session.add(instance)
+                    await session.commit()
+                    log(f'Saved: {instance.__class__.__name__} {instance.id}')
+
+                    # Don't hold onto inserted rows, polluting session and leaking memory
+                    session.expunge_all()
+
+        print()
+        print()
+
     await session.commit()

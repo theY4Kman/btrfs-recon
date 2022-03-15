@@ -51,6 +51,18 @@ class LeafItem(Keyed, BaseStruct):
     offset = sa.Column(fields.uint4, nullable=False)
     size = sa.Column(fields.uint4, nullable=False)
 
-    struct_type = sa.Column(sa.String, nullable=False)
-    struct_id = sa.Column(sa.Integer, nullable=False)
+    struct_type = sa.Column(sa.String)
+    struct_id = sa.Column(sa.Integer)
     struct = fields.generic_relationship(struct_type, struct_id)
+
+    __table_args__ = (
+        sa.CheckConstraint(
+            (struct_type.is_(None) & struct_id.is_(None))
+            | (~struct_type.is_(None) & ~struct_type.is_(None)),
+            name='leaf_enforce_struct_ref_completeness',
+        ),
+        sa.UniqueConstraint(
+            struct_type, struct_id,
+            name='leaf_uniq_struct_ref',
+        ),
+    )

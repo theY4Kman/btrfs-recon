@@ -1,8 +1,8 @@
-from marshmallow import fields
-
 from btrfs_recon import structure
 from btrfs_recon.persistence import DirItem
 from btrfs_recon.persistence.serializers import KeySchema, LeafItemDataSchema
+
+from . import fields
 
 __all__ = [
     'DirItemSchema',

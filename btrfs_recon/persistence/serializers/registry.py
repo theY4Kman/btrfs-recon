@@ -61,8 +61,10 @@ def autoregister() -> None:
     """Automatically register any StructSchema subclasses"""
     from .base import StructSchema
 
-    for schema_cls in StructSchema.__subclasses__():
+    queue = StructSchema.__subclasses__()
+    for schema_cls in queue:
         register_schema(schema_cls)
+        queue.extend(schema_cls.__subclasses__())
 
 
 def find_by_schema(schema_cls: StructSchemaType) -> RegistryEntry | None:

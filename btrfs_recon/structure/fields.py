@@ -66,7 +66,7 @@ class TimespecDatetimeAdapter(cs.Adapter):
         try:
             return datetime.utcfromtimestamp(obj.sec).replace(microsecond=int(obj.nsec / 1000))
         except (ValueError, OverflowError, OSError):
-            return obj
+            return None
 
 
 Timespec = TimespecDatetimeAdapter(TimespecStruct.as_struct())

@@ -39,6 +39,8 @@ class ObjectId(EnumBase):
 
 
 class KeyType(EnumBase):
+    UNKNOWN = 0
+
     InodeItem = 1
     InodeRef = 12
     InodeExtref = 13
@@ -74,6 +76,8 @@ class KeyType(EnumBase):
     TemporaryItem = 248
     PersistentItem = 249
     DevReplace = 250
+    Subvol = 251
+    ReceivedSubvol = 252
 
 
 class Key(Struct):

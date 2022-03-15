@@ -28,22 +28,23 @@ class FileExtentItem(BaseLeafItemData):
     num_bytes = sa.Column(fields.uint8)
 
     __table_args__ = (
-        sa.CheckConstraint(
-            ((type == ExtentDataType.INLINE)
-             & (data != None)
-             & (disk_bytenr == None)
-             & (disk_num_bytes == None)
-             & (offset == None)
-             & (num_bytes == None)),
-            name='file_extent_item_inline_data',
-        ),
-        sa.CheckConstraint(
-            ((type != ExtentDataType.INLINE)
-             & (data == None)
-             & (disk_bytenr != None)
-             & (disk_num_bytes != None)
-             & (offset != None)
-             & (num_bytes != None)),
-            name='file_extent_item_data_ref',
-        ),
+        # NOTE: removed, as some scanned structs just do not abide by these
+        # sa.CheckConstraint(
+        #     ((type == ExtentDataType.INLINE)
+        #      & (data != None)
+        #      & (disk_bytenr == None)
+        #      & (disk_num_bytes == None)
+        #      & (offset == None)
+        #      & (num_bytes == None)),
+        #     name='file_extent_item_inline_data',
+        # ),
+        # sa.CheckConstraint(
+        #     ((type != ExtentDataType.INLINE)
+        #      & (data == None)
+        #      & (disk_bytenr != None)
+        #      & (disk_num_bytes != None)
+        #      & (offset != None)
+        #      & (num_bytes != None)),
+        #     name='file_extent_item_data_ref',
+        # ),
     )
