@@ -1,13 +1,18 @@
+import asyncio
 import uuid
-from typing import Collection
+from typing import AsyncIterable, Collection
 
 import asyncclick as click
 import sqlalchemy as sa
+from aiomultiprocess import Pool
 from sqlalchemy.ext.asyncio import AsyncSession
+from tqdm import tqdm
 
+import btrfs_recon.db
 from btrfs_recon import structure
-from btrfs_recon.parsing import find_nodes, parse_at
+from btrfs_recon.parsing import FindNodesLogFunc, find_nodes, parse_at
 from btrfs_recon.persistence import Filesystem, models
+
 from .base import db, pass_session
 from ..types import HEX_DEC_INT
 
@@ -82,15 +87,25 @@ async def sync_fs(session: AsyncSession, label: str):
               help='Limit scan to device with specified devid')
 @click.option('-a', '--alignment', type=int, default=0x10_000)
 @click.option('-s', '--start', type=HEX_DEC_INT, default=None)
+@click.option('-e', '--end', type=HEX_DEC_INT, default=None)
 @click.option('--reverse/--forward', type=bool, default=True)
+@click.option('--parallel/--no-parallel', type=bool, default=True)
+@click.option('--workers', type=int, default=None)
+@click.option('--qsize', type=int, default=24)
+@click.option('--scan-qsize', type=int, default=1_000)
 @pass_session
 async def scan_fs(
     session: AsyncSession,
     label: str,
     alignment: int,
-    start: int,
+    start: int | None,
+    end: int | None,
     reverse: bool,
     devid: Collection[int],
+    parallel: bool,
+    workers: int | None,
+    qsize: int,
+    scan_qsize: int,
 ):
     """Scan a filesystem for aligned records"""
     q = sa.select(models.Filesystem).filter_by(label=label)
@@ -102,29 +117,111 @@ async def scan_fs(
             continue
 
         with device.open(read=True) as fp:
-            log, headers = find_nodes(
+            log, headers = await find_nodes(
                 fp,
                 fsid=fs.fsid,
                 alignment=alignment,
                 start_loc=start,
+                end_loc=end,
                 reversed=reverse,
             )
-            for loc, header in headers:
-                tree_node = parse_at(fp, loc, structure.TreeNode)
 
-                try:
-                    instance = tree_node.to_model(context={'device': device})
-                except ValueError:
-                    continue
-                else:
-                    session.add(instance)
-                    await session.commit()
-                    log(f'Saved: {instance.__class__.__name__} {instance.id}')
+            if parallel:
+                await _scan_parallel(
+                    device, log, headers,
+                    workers=workers,
+                    qsize=qsize,
+                    scan_qsize=scan_qsize,
+                )
+            else:
+                async for loc, header in headers:
+                    tree_node = parse_at(fp, loc, structure.TreeNode)
 
-                    # Don't hold onto inserted rows, polluting session and leaking memory
-                    session.expunge_all()
+                    if msg := await _process_loc(session, tree_node, device):
+                        log(msg)
+                        # Don't hold onto inserted rows, polluting session and leaking memory
+                        session.expunge_all()
 
         print()
         print()
 
     await session.commit()
+
+
+async def _scan_parallel(
+    device: models.Device,
+    log: FindNodesLogFunc,
+    headers: AsyncIterable[tuple[int, structure.Header]],
+    workers: int | None = None,
+    qsize: int = 24,
+    scan_qsize: int = 1_000,
+):
+    queue = asyncio.Queue(maxsize=scan_qsize)
+    pending_queue = asyncio.Queue(maxsize=qsize)
+
+    finished_scanning = asyncio.Event()
+
+    queue_pbar = tqdm(position=1, unit='node', total=0)
+
+    async with Pool(processes=workers) as pool:
+        device_id = device.id
+
+        async def _process_and_print(loc: int):
+            if not pool.running:
+                return
+
+            args = (device.path, device_id, loc)
+            if msg := await pool.apply(_multiprocess_loc, args=args):
+                log(msg)
+            queue_pbar.n += 1
+
+            # Remove an item from the pending queue, freeing the queue master
+            # to retrieve another item
+            pending_queue.get_nowait()
+
+        async def queue_master():
+            while pool.running and (not queue.empty() or not finished_scanning.is_set()):
+                loc = await queue.get()
+                await pending_queue.put(loc)
+                asyncio.create_task(_process_and_print(loc))
+
+            await pending_queue.join()
+
+        processor = asyncio.create_task(queue_master(), name='queue processor')
+
+        async for loc, header in headers:
+            await queue.put(loc)
+            queue_pbar.total += 1
+        finished_scanning.set()
+
+        await processor
+
+
+async def _multiprocess_loc(image_path: str, device_id: int, loc: int):
+    async with btrfs_recon.db.Session() as session:
+        with open(image_path, 'rb') as fp:
+            tree_node = parse_at(fp, loc, structure.TreeNode)
+
+        try:
+            return await _process_loc(session, tree_node=tree_node, device=device_id)
+        finally:
+            # Don't hold onto inserted rows, polluting session and leaking memory
+            session.expunge_all()
+
+
+async def _process_loc(
+    session: AsyncSession, tree_node: structure.TreeNode, device: int | models.Device
+):
+    try:
+        instance = tree_node.to_model(context={'device': device})
+    except ValueError:
+        return
+    else:
+        session.add(instance)
+        await session.commit()
+        # TODO: fix uint to actually return int
+        phys = int(instance.address.phys)
+        return (
+            f'Saved: {instance.__class__.__name__} {instance.id} '
+            f'@ {hex(phys)} ({phys})'
+        )

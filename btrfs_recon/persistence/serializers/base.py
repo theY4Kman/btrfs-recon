@@ -134,8 +134,15 @@ class AddressSchema(BaseSchema):
 
     @ma.post_load
     def make_instance_post(self, instance: Address, **kwargs):
-        instance.device = self.context['device']
-        instance.device_id = instance.device.id
+        from btrfs_recon.persistence.models import Device
+
+        ctx_device = self.context['device']
+        if isinstance(ctx_device, Device):
+            instance.device = ctx_device
+            instance.device_id = instance.device.id
+        else:
+            instance.device_id = ctx_device
+
         return instance
 
 

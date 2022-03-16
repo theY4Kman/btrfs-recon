@@ -12,7 +12,8 @@ __all__ = [
     'SyncSession',
 ]
 
-engine = create_async_engine('postgresql+psycopg://btrfs_recon:btrfs_recon@127.0.0.1:5436/btrfs_recon')
+engine = create_async_engine('postgresql+psycopg://btrfs_recon:btrfs_recon@127.0.0.1:5436/btrfs_recon',
+                             pool_size=20, max_overflow=0)
 Session = orm.sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 sync_engine = sa.create_engine('postgresql+psycopg://btrfs_recon:btrfs_recon@127.0.0.1:5436/btrfs_recon')

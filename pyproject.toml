@@ -10,10 +10,12 @@ btrfs-recon = "btrfs_recon.cli:cli"
 [tool.poetry.dependencies]
 python = "^3.10"
 
+aiomultiprocess = "^0.9.0"
 alembic = "^1.7.5"
 anyio = "^3.5.0"
 asyncclick = "^8.0.3.1"
 construct = "^2.10.67"
+greenlet = "!=0.4.17"
 inflection = "^0.5.1"
 intervaltree = "^3.1.0"
 psycopg = {extras = ["binary"], version = "^3.0.7"}
@@ -21,10 +23,8 @@ python-dateutil = "^2.8.2"
 sqlalchemy = {url = "https://github.com/sqlalchemy/sqlalchemy/tarball/df056af49c51dcbcd70eb13ead5c3d8588c08235"}
 sqlalchemy-repr = "^0.0.2"
 SQLAlchemy-Utils = "^0.38.2"
-marshmallow-sqlalchemy = "^0.27.0"
-
 sqlalchemy2-stubs = "^0.0.2-alpha.19"
-greenlet = "!=0.4.17"
+marshmallow-sqlalchemy = "^0.27.0"
 
 [tool.poetry.dev-dependencies]
 construct-typing = "^0.5.2"

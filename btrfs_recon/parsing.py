@@ -1,3 +1,4 @@
+import asyncio
 import io
 import typing
 import uuid
@@ -100,16 +101,17 @@ class FindNodesLogFunc(typing.Protocol):
     ) -> None: ...
 
 
-def find_nodes(
+async def find_nodes(
     fp: io.FileIO, *,
     alignment: int = 0x10000,
     start_loc: int | None = None,
+    end_loc: int | None = None,
     reversed: bool = True,
     fsid: str | int | bytes | uuid.UUID | None = uuid.UUID('bba692f7-5be7-4173-bc27-bb3e21644739'),
     predicate: Callable[[int, Header], bool] | None = None,
     echo: bool = True,
     show_progress: bool = True,
-) -> tuple[FindNodesLogFunc, Iterable[tuple[int, Header]]]:
+) -> tuple[FindNodesLogFunc, typing.AsyncIterable[tuple[int, Header]]]:
     if fsid is not None and not isinstance(fsid, uuid.UUID):
         fsid = uuid.UUID(fsid)
 
@@ -123,10 +125,12 @@ def find_nodes(
 
     if reversed:
         start_loc = aligned_max_loc if start_loc is None else start_loc
-        loc_iter = range(start_loc, -1, -alignment)
+        end_loc = -1 if end_loc is None else end_loc - 1
+        loc_iter = range(start_loc, end_loc, -alignment)
     else:
         start_loc = 0 if start_loc is None else start_loc
-        loc_iter = range(start_loc, aligned_max_loc + 1, alignment)
+        end_loc = aligned_max_loc + 1 if end_loc is None else end_loc + 1
+        loc_iter = range(start_loc, end_loc, alignment)
 
     if show_progress:
         pbar = tqdm(loc_iter, unit='loc')
@@ -143,8 +147,11 @@ def find_nodes(
         pbar = loc_iter
         log = print
 
-    def find_results() -> Iterable[tuple[int, Header]]:
+    async def find_results() -> typing.AsyncGenerator[tuple[int, Header], None]:
         for loc in pbar:
+            # Yield to event loop
+            await asyncio.sleep(0)
+
             header = parse_at(fp, loc, Header)
             if fsid is not None and header.fsid != fsid:
                 continue

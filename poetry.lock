@@ -1,4 +1,12 @@
 [[package]]
+name = "aiomultiprocess"
+version = "0.9.0"
+description = "AsyncIO version of the standard multiprocessing module"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[[package]]
 name = "alembic"
 version = "1.7.6"
 description = "A database migration tool for SQLAlchemy."
@@ -324,6 +332,7 @@ sqlcipher = ["sqlcipher3-binary"]
 [package.source]
 type = "url"
 url = "https://github.com/sqlalchemy/sqlalchemy/tarball/df056af49c51dcbcd70eb13ead5c3d8588c08235"
+
 [[package]]
 name = "sqlalchemy-repr"
 version = "0.0.2"
@@ -407,9 +416,13 @@ python-versions = ">=2"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "d3007c359ece7814c86b50ac120c1e453de45e8f1382dfe35c4eecda3d24816a"
+content-hash = "0968b343a3a42ee7fc8b3e14e6113fb226e3c7ad1fc1c6480b00577cdd145fd0"
 
 [metadata.files]
+aiomultiprocess = [
+    {file = "aiomultiprocess-0.9.0-py3-none-any.whl", hash = "sha256:3036c4c881cfbc63674686e036097f22309017c6bf96b04722a542ac9cac7423"},
+    {file = "aiomultiprocess-0.9.0.tar.gz", hash = "sha256:07e7d5657697678d9d2825d4732dfd7655139762dee665167380797c02c68848"},
+]
 alembic = [
     {file = "alembic-1.7.6-py3-none-any.whl", hash = "sha256:ad842f2c3ab5c5d4861232730779c05e33db4ba880a08b85eb505e87c01095bc"},
     {file = "alembic-1.7.6.tar.gz", hash = "sha256:6c0c05e9768a896d804387e20b299880fe01bc56484246b0dffe8075d6d3d847"},
