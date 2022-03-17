@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlalchemy as sa
+from sqlalchemy import func
 
 from btrfs_recon import structure
 from btrfs_recon.persistence import fields
@@ -43,3 +44,14 @@ class InodeItem(BaseLeafItemData):
 class InodeRef(BaseLeafItemData):
     index = sa.Column(fields.uint8, nullable=False)
     name = sa.Column(sa.String, nullable=False)
+
+    ext = sa.Column(
+        sa.Computed(
+            sa.case(
+                (func.strpos(name, '.') == 0, None),
+                else_=func.split_part(name, '.', -1),
+            ),
+            persisted=True,
+        ),
+        type_=sa.String,
+    )
