@@ -163,7 +163,11 @@ async def _scan_parallel(
 
     queue_pbar = tqdm(position=1, unit='node', total=0)
 
-    async with Pool(processes=workers) as pool:
+    async with Pool(
+        processes=workers,
+        childconcurrency=1,
+        maxtasksperchild=qsize,
+    ) as pool:
         device_id = device.id
 
         async def _process_and_print(loc: int):
