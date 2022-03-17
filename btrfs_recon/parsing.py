@@ -91,6 +91,8 @@ def walk_fs_tree(root: TreeNode):
 
 
 class FindNodesLogFunc(typing.Protocol):
+    pbar: tqdm | None
+
     def __call__(
         self,
         *values: object,
@@ -111,6 +113,7 @@ async def find_nodes(
     predicate: Callable[[int, Header], bool] | None = None,
     echo: bool = True,
     show_progress: bool = True,
+    tqdm_kwargs: dict = None,
 ) -> tuple[FindNodesLogFunc, typing.AsyncIterable[tuple[int, Header]]]:
     if fsid is not None and not isinstance(fsid, uuid.UUID):
         fsid = uuid.UUID(fsid)
@@ -133,7 +136,10 @@ async def find_nodes(
         loc_iter = range(start_loc, end_loc, alignment)
 
     if show_progress:
-        pbar = tqdm(loc_iter, unit='loc')
+        tqdm_kwargs = tqdm_kwargs or {}
+        tqdm_kwargs.setdefault('unit', 'loc')
+
+        pbar = tqdm(loc_iter, **tqdm_kwargs)
         buf = io.StringIO()
 
         def log(*args, **kwargs):
@@ -143,9 +149,13 @@ async def find_nodes(
             pbar.write(buf.getvalue(), end='', **kwargs)
             buf.seek(0)
             buf.truncate()
+
+        log.pbar = pbar
+
     else:
         pbar = loc_iter
-        log = print
+        log = lambda *a, **k: print(*a, **k)
+        log.pbar = None
 
     async def find_results() -> typing.AsyncGenerator[tuple[int, Header], None]:
         for loc in pbar:
