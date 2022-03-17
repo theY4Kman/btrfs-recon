@@ -182,12 +182,25 @@ async def _scan_parallel(
             # Remove an item from the pending queue, freeing the queue master
             # to retrieve another item
             pending_queue.get_nowait()
+            pending_queue.task_done()
 
         async def queue_master():
+            wait_finished_scanning = asyncio.create_task(
+                finished_scanning.wait(), name='wait until all aligned locations have been scanned'
+            )
+
             while pool.running and (not queue.empty() or not finished_scanning.is_set()):
-                loc = await queue.get()
-                await pending_queue.put(loc)
-                asyncio.create_task(_process_and_print(loc))
+                queue_get = asyncio.create_task(queue.get(), name='get next valid loc from queue')
+                done, pending = await asyncio.wait(
+                    (queue_get, wait_finished_scanning), return_when=asyncio.FIRST_COMPLETED
+                )
+                if finished_scanning.is_set() and queue.empty():
+                    break
+
+                if queue_get in done:
+                    loc = queue_get.result()
+                    await pending_queue.put(loc)
+                    asyncio.create_task(_process_and_print(loc))
 
             await pending_queue.join()
 
