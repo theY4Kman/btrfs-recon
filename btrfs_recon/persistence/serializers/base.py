@@ -203,9 +203,9 @@ def before_flush(session, flush_context, instances):
 
     # 1. Grab all Addresses of tracked structs
     address_key = lambda addr: (
-        int(addr.device_id or addr.device.id),
-        int(addr.phys),
-        int(addr.phys_size),
+        addr.device_id or addr.device.id,
+        addr.phys,
+        addr.phys_size,
     )
     address_struct_map = {
         address_key(struct.address): struct

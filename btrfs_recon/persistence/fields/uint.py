@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 import psycopg
 import sqlalchemy as sa
@@ -6,6 +6,7 @@ from psycopg import postgres
 from psycopg.types import TypeInfo
 from psycopg.types.numeric import _NumberDumper, IntLoader
 from sqlalchemy.dialects.postgresql.psycopg import _PGInteger
+from sqlalchemy.engine import Dialect
 from sqlalchemy.ext.compiler import compiles
 
 __all__ = [
@@ -42,7 +43,9 @@ class uint(sa.TypeDecorator):
     def bind_expression(self, bindparam: Any) -> Any:
         return sa.cast(bindparam, self.__class__)
 
-    # TODO: these fields should coerce to Python ints!
+    def process_result_value(self, value: Any, dialect: Dialect) -> Optional[int]:
+        if value is not None:
+            return int(value)
 
 
 class uint1(uint):

@@ -112,8 +112,7 @@ async def scan_fs(
     fs: Filesystem = (await session.execute(q)).scalar_one()
 
     for device in fs.devices:
-        # TODO: fix uint sqla type, so it actually returns an int :|
-        if devid and int(device.devid) not in devid:
+        if devid and device.devid not in devid:
             continue
 
         with device.open(read=True) as fp:
@@ -236,8 +235,8 @@ async def _process_loc(
     else:
         session.add(instance)
         await session.commit()
-        # TODO: fix uint to actually return int
-        phys = int(instance.address.phys)
+
+        phys = instance.address.phys
         return (
             f'Saved: {instance.__class__.__name__} {instance.id} '
             f'@ {hex(phys)} ({phys})'
