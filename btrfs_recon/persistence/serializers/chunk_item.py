@@ -19,5 +19,6 @@ class ChunkItemSchema(StructSchema):
     class Meta:
         model = ChunkItem
         struct_class = structure.ChunkItem
+        key_type = structure.KeyType.ChunkItem
 
     stripes = fields.Nested(StripeSchema, many=True)
