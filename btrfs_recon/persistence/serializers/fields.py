@@ -44,7 +44,12 @@ class ParentInstanceField(Field):
         data: typing.Mapping[str, typing.Any] | None = None,
         **kwargs,
     ):
-        self.parent.nesting_schema._parent_instance_fields.append((self.parent.nesting_name, self.name))
+        # If a ParentInstanceField is declared, but we're the root schema, there's no parent
+        # instance to pull from
+        if nesting_schema := self.parent.nesting_schema:
+            # XXX: could we possibly do something other than *nothing* here?
+            nesting_schema._parent_instance_fields.append((self.parent.nesting_name, self.name))
+
         return super().deserialize(value=value, attr=attr, data=data, **kwargs)
 
 
