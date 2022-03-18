@@ -113,6 +113,27 @@ class BaseSchema(SQLAlchemyAutoSchema, metaclass=InheritableMetaSchemaMeta):
             data = dataclasses.asdict(data)
         return data
 
+    @ma.post_load(pass_many=True)
+    def ensure_nested_instance_for_many(self, outputs: list[dict[str, Any]], many: bool, **kwargs):
+        if self.many and self.instance:
+            for i, value in enumerate(outputs):
+                value['__i'] = i
+        return outputs
+
+    @ma.post_load
+    def make_instance(self, data, **kwargs):
+        if not self.many:
+            return super().make_instance(data, **kwargs)
+
+        instances = self.instance
+        if self.instance and '__i' in data:
+            self.instance = instances[data.pop('__i')]
+
+        try:
+            return super().make_instance(data, **kwargs)
+        finally:
+            self.instance = instances
+
     @ma.post_load
     def make_instance_post_fulfill_parent_instance_fields(self, instance, **kwargs):
         for field, child_field in self._parent_instance_fields:
