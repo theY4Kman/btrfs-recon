@@ -22,7 +22,9 @@ class ChunkItem(BaseStruct):
     num_stripes = sa.Column(fields.uint2, nullable=False)
     sub_stripes = sa.Column(fields.uint2, nullable=False)
 
-    stripes: orm.Mapped[Stripe] = orm.relationship('Stripe', back_populates='chunk_item', uselist=True)
+    stripes: orm.Mapped[Stripe] = orm.relationship(
+        'Stripe', back_populates='chunk_item', uselist=True, lazy='joined'
+    )
 
     # Individual boolean columns for each flag value
     for _flag in structure.BlockGroupFlag:
