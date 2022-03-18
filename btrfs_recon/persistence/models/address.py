@@ -26,10 +26,7 @@ class Address(BaseModel):
     struct_id = sa.Column(sa.Integer)
     struct = fields.generic_relationship(struct_type, struct_id)
 
-    device: orm.Mapped[Device] = orm.relationship('Device')
-
-    # TODO
-    # filesystem = orm.relationship('Filesystem')
+    device: orm.Mapped[Device] = orm.relationship('Device', lazy='selectin')
 
     __table_args__ = (
         sa.UniqueConstraint(

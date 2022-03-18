@@ -1,18 +1,20 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
 from datetime import datetime
-from typing import TYPE_CHECKING, Type
+from typing import BinaryIO, TYPE_CHECKING, Type
 
 import inflection
 import sqlalchemy as sa
 import sqlalchemy.orm as orm
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import declarative_base, declared_attr
 from sqlalchemy_repr import RepresentableBase
 
 from btrfs_recon import structure
+from btrfs_recon.parsing import parse_at
 
 if TYPE_CHECKING:
+    from typing import Self
     from btrfs_recon.persistence.serializers import StructSchema, registry
     from .address import Address
     from .tree_node import LeafItem
@@ -68,9 +70,27 @@ class BaseStruct(BaseModel):
         entry = cls.get_registry_entry()
         return entry.struct
 
-    async def merge_into(self, session: AsyncSession) -> None:
-        """Add this model and any related models to session, updating any rows with dupe Address"""
-        # TODO — something something Mapper.relationships
+    def parse_disk(self, *, fp: BinaryIO = None) -> structure.Struct:
+        """Parse the on-disk structure, using stored address info"""
+        struct_cls = self.get_struct_class()
+
+        address = self.address
+        phys = address.phys
+        device = address.device
+
+        if fp is None:
+            ctx = device.open(read=True)
+        else:
+            ctx = nullcontext(fp)
+
+        with ctx as stream:
+            return parse_at(stream, phys, struct_cls)
+
+    def reparse(self, *, fp: BinaryIO = None) -> Self:
+        """Update the current instance with info parsed from the on-disk structure"""
+        struct = self.parse_disk(fp=fp)
+        struct.to_model(instance=self, context={'device': self.address.device})
+        return self
 
 
 class BaseLeafItemData(BaseStruct):

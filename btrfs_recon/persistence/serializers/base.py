@@ -9,7 +9,6 @@ import sqlalchemy as sa
 import sqlalchemy.dialects.postgresql as pg
 import sqlalchemy.event
 import sqlalchemy.orm as orm
-from marshmallow import fields as ma_fields, pre_load
 from marshmallow_sqlalchemy import ModelConverter, SQLAlchemyAutoSchema
 from marshmallow_sqlalchemy.schema import SQLAlchemyAutoSchemaMeta, SQLAlchemyAutoSchemaOpts
 
@@ -185,7 +184,7 @@ class StructSchema(BaseSchema, SQLAlchemyAutoSchema):
     opts: StructSchemaOpts
 
     _version = StructSchemaVersionField()
-    address = fields.Nested(AddressSchema, data_key='*')
+    address = fields.Nested(AddressSchema, data_key='*', attribute='address')
 
     @ma.post_load()
     def post_make_instance_upsert_address(self, instance, *, many: bool = False, **kwargs):
