@@ -2,19 +2,18 @@ from __future__ import annotations
 
 from contextlib import nullcontext
 from datetime import datetime
-from typing import BinaryIO, TYPE_CHECKING, Type
+from typing import Any, BinaryIO, Generator, TYPE_CHECKING, Type
 
 import inflection
 import sqlalchemy as sa
 import sqlalchemy.orm as orm
 from sqlalchemy.orm import declarative_base, declared_attr
-from sqlalchemy_repr import RepresentableBase
+from sqlalchemy_repr import PrettyRepr, Repr
 
-from btrfs_recon import structure
+from btrfs_recon import _config, structure
 from btrfs_recon.parsing import parse_at
 
 if TYPE_CHECKING:
-    from typing import Self
     from btrfs_recon.persistence.serializers import StructSchema, registry
     from .address import Address
     from .tree_node import LeafItem
@@ -25,6 +24,24 @@ __all__ = [
     'BaseStruct',
     'BaseLeafItemData',
 ]
+
+repr_cls = PrettyRepr if _config.MODEL_REPR_PRETTY else Repr
+
+if _config.MODEL_REPR_ID:
+    class IncludeIdRepr(repr_cls):
+        def _iter_attrs(self, obj) -> Generator[tuple[str, Any], None, None]:
+            yield '_id', id(obj)
+            yield from super()._iter_attrs(obj)
+
+    repr_cls = IncludeIdRepr
+
+_shared_repr = repr_cls()
+
+
+class RepresentableBase:
+    def __repr__(self) -> str:
+        return _shared_repr.repr(self)
+
 
 Base = declarative_base(cls=RepresentableBase)
 

@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Any
 
@@ -15,3 +16,7 @@ DB_SHELL_SQLPARSE_FORMAT_KWARGS: dict[str, Any] = {
     'reindent_aligned': True,
     'truncate_strings': 500,
 }
+
+_MODEL_REPR = {s.strip() for s in os.getenv('MODEL_REPR', '').split(',')}
+MODEL_REPR_PRETTY = 'pretty' in _MODEL_REPR
+MODEL_REPR_ID = 'id' in _MODEL_REPR
