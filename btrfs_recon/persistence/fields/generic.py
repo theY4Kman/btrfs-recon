@@ -96,7 +96,7 @@ sa.event.listen(orm.Session, 'after_flush_postexec', GenericAttributeImpl.after_
 
 
 class GenericRelationshipProperty(sqlalchemy_utils.generic.GenericRelationshipProperty):
-    cascade = orm.CascadeOptions(('all', 'delete-orphan'))
+    cascade = orm.CascadeOptions(('save-update', 'merge'))
     passive_deletes = False
 
     def instrument_class(self, mapper):
