@@ -1,14 +1,14 @@
-import sqlalchemy.orm as orm
 import asyncio
 import uuid
 from typing import AsyncIterable, Collection
 
 import asyncclick as click
+import construct as cs
 import sqlalchemy as sa
 from aiomultiprocess import Pool
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy_utils.functions.orm import _get_class_registry
 from tqdm import tqdm
+from tui_progress import timed_subtask
 
 import btrfs_recon.db
 from btrfs_recon import structure
@@ -59,16 +59,30 @@ async def create_fs(session: AsyncSession, label: str, devices: list[str]):
 @pass_session
 async def sync_fs(session: AsyncSession, label: str):
     """Sync Superblock and Device records for a filesystem"""
-    fs = (await session.execute(sa.select(models.Filesystem).filter_by(label=label))).scalar_one()
+    with timed_subtask('Grabbing filesystem'):
+        fs = (await session.execute(sa.select(models.Filesystem).filter_by(label=label))).scalar_one()
 
     encountered_fsids: set[uuid.UUID] = set()
     for device in fs.devices:
-        struct_superblock: structure.Superblock = device.parse_superblock()
-        device.update_from_superblock(struct_superblock)
-        encountered_fsids.add(struct_superblock.fsid)
+        struct_superblocks: list[structure.Superblock] = []
+        for pos in (0x10_000, 0x40_000_000, 0x4000000000):
+            with timed_subtask(f'Parsing {device} superblock @ {hex(pos)}') as task:
+                try:
+                    struct_superblock = device.parse_superblock(pos=pos)
+                except cs.ConstructError as e:
+                    task.print_warn(str(e))
+                    task.fail('INVALID')
+                    continue
 
-        superblock = struct_superblock.to_model(context={'device': device})
-        session.add(superblock)
+                struct_superblocks.append(struct_superblock)
+
+                superblock = struct_superblock.to_model(context={'device': device}, session=session)
+                session.add(superblock)
+
+        primary_superblock = struct_superblocks[0]
+
+        device.update_from_superblock(primary_superblock)
+        encountered_fsids.add(primary_superblock.fsid)
 
     if len(encountered_fsids) > 1:
         click.echo(
