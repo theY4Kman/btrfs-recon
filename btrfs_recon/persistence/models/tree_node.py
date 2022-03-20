@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import uuid
+from typing import BinaryIO
 
 import sqlalchemy.orm as orm
 import sqlalchemy as sa
 import sqlalchemy.dialects.postgresql as pg
 
+from btrfs_recon import structure
 from .base import BaseStruct
 from .key import Keyed
 from .. import fields
@@ -46,7 +48,7 @@ class KeyPtr(Keyed, BaseStruct):
 
 class LeafItem(Keyed, BaseStruct):
     parent_id: orm.Mapped[int] = sa.Column(sa.ForeignKey(TreeNode.id), nullable=False)
-    parent: orm.Mapped[TreeNode] = orm.relationship(TreeNode)
+    parent: orm.Mapped[TreeNode] = orm.relationship(TreeNode, lazy='selectin')
 
     offset = sa.Column(fields.uint4, nullable=False)
     size = sa.Column(fields.uint4, nullable=False)
@@ -66,3 +68,10 @@ class LeafItem(Keyed, BaseStruct):
             name='leaf_uniq_struct_ref',
         ),
     )
+
+    def parse_disk(self, *, fp: BinaryIO = None, **contextkw) -> structure.Struct:
+        address = self.parent.address
+        contextkw.setdefault('header', {})
+        contextkw['header'].setdefault('phys_end', address.phys + address.phys_size)
+
+        return super().parse_disk(fp=fp, **contextkw)
