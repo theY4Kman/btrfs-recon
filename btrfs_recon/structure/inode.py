@@ -1,7 +1,7 @@
 from datetime import datetime
 
 import construct as cs
-from construct_typed import EnumBase, TEnum
+from construct_typed import TEnum
 
 from . import fields
 from .base import field, Struct
@@ -13,7 +13,7 @@ __all__ = [
 ]
 
 
-class InodeItemFlag(EnumBase):
+class InodeItemFlag(fields.EnumBase):
     NODATASUM = (1 << 0)
     NODATACOW = (1 << 1)
     READONLY = (1 << 2)

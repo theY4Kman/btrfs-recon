@@ -1,6 +1,7 @@
 import construct as cs
-from construct_typed import EnumBase, TEnum
+from construct_typed import TEnum
 
+from . import fields
 from .base import field, Struct
 from .key import Key
 
@@ -10,7 +11,7 @@ __all__ = [
 ]
 
 
-class DirEntryType(EnumBase):
+class DirEntryType(fields.EnumBase):
     UNKNOWN = 0
     REG_FILE = 1
     DIR = 2

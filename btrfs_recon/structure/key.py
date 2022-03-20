@@ -1,7 +1,8 @@
 import construct as cs
-from construct_typed import EnumBase, TEnum
+from construct_typed import TEnum
 
 from .base import Struct, field
+from . import fields
 
 __all__ = [
     'ObjectId',
@@ -11,7 +12,7 @@ __all__ = [
 ]
 
 
-class ObjectId(EnumBase):
+class ObjectId(fields.EnumBase):
     RootTree = 1
     ExtentTree = 2
     ChunkTree = 3
@@ -38,7 +39,7 @@ class ObjectId(EnumBase):
     FirstChunkTree = 256
 
 
-class KeyType(EnumBase):
+class KeyType(fields.EnumBase):
     UNKNOWN = 0
 
     InodeItem = 1

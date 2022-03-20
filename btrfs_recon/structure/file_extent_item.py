@@ -1,6 +1,7 @@
 import construct as cs
-from construct_typed import EnumBase, TEnum
+from construct_typed import TEnum
 
+from . import fields
 from .base import field, Struct
 
 __all__ = [
@@ -12,21 +13,21 @@ __all__ = [
 ]
 
 
-class CompressionType(EnumBase):
+class CompressionType(fields.EnumBase):
     NONE = 0
     ZLIB = 1
     LZO = 2
 
 
-class EncryptionType(EnumBase):
+class EncryptionType(fields.EnumBase):
     NONE = 0
 
 
-class EncodingType(EnumBase):
+class EncodingType(fields.EnumBase):
     NONE = 0
 
 
-class ExtentDataType(EnumBase):
+class ExtentDataType(fields.EnumBase):
     INLINE = 0
     REGULAR = 1
     PREALLOC = 2

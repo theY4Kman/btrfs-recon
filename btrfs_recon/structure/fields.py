@@ -1,7 +1,9 @@
+import typing
 import uuid
 from datetime import datetime
 
 import construct as cs
+import construct_typed as cst
 
 from btrfs_recon.constants import BTRFS_UUID_SIZE, BTRFS_FSID_SIZE
 
@@ -70,3 +72,11 @@ class TimespecDatetimeAdapter(cs.Adapter):
 
 
 Timespec = TimespecDatetimeAdapter(TimespecStruct.as_struct())
+
+
+class EnumBase(cst.EnumBase):
+    @classmethod
+    def _missing_(cls, value: typing.Any) -> typing.Optional[cst.EnumBase]:
+        if isinstance(value, str):
+            return cls.__members__[value]
+        return super()._missing_(value)

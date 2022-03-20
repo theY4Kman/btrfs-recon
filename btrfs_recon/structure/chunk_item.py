@@ -2,7 +2,6 @@ from typing import List
 from uuid import UUID
 
 import construct as cs
-from construct_typed import EnumBase
 
 from . import fields
 from .base import Struct, field
@@ -14,7 +13,7 @@ __all__ = [
 ]
 
 
-class BlockGroupFlag(EnumBase):
+class BlockGroupFlag(fields.EnumBase):
     DATA = 1 << 0
     SYSTEM = 1 << 1
     METADATA = 1 << 2

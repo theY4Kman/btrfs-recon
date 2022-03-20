@@ -1,7 +1,8 @@
 import construct as cs
-from construct_typed import EnumBase, TEnum
+from construct_typed import TEnum
 
 from .base import field, Struct
+from . import fields
 
 __all__ = [
     'ExtentItemFlags',
@@ -9,7 +10,7 @@ __all__ = [
 ]
 
 
-class ExtentItemFlags(EnumBase):
+class ExtentItemFlags(fields.EnumBase):
     """
     ref: https://btrfs.wiki.kernel.org/index.php/Data_Structures#btrfs_extent_item_flags
     """

@@ -1,7 +1,7 @@
 from uuid import UUID
 
 import construct as cs
-from construct_typed import EnumBase, TEnum
+from construct_typed import TEnum
 
 from btrfs_recon.constants import BTRFS_CSUM_SIZE, BTRFS_LABEL_SIZE, BTRFS_MAGIC
 
@@ -18,7 +18,7 @@ __all__ = [
 ]
 
 
-class SuperblockFlags(EnumBase):
+class SuperblockFlags(fields.EnumBase):
     ERROR = 1 << 2
     SEEDING = 1 << 32
     METADUMP = 1 << 33
