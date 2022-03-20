@@ -1,3 +1,4 @@
+import sqlalchemy.orm as orm
 import asyncio
 import uuid
 from typing import AsyncIterable, Collection
@@ -6,12 +7,13 @@ import asyncclick as click
 import sqlalchemy as sa
 from aiomultiprocess import Pool
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy_utils.functions.orm import _get_class_registry
 from tqdm import tqdm
 
 import btrfs_recon.db
 from btrfs_recon import structure
 from btrfs_recon.parsing import FindNodesLogFunc, find_nodes, parse_at
-from btrfs_recon.persistence import Filesystem, models
+from btrfs_recon.persistence import Filesystem, models, registry
 
 from .base import db, pass_session
 from ..types import HEX_DEC_INT
@@ -185,7 +187,7 @@ async def _scan_parallel(
 
         async def queue_master():
             wait_finished_scanning = asyncio.create_task(
-                finished_scanning.wait(), name='wait until all aligned locations have been scanned'
+                finished_scanning.wait(), name='wait until all locations have been scanned'
             )
 
             while pool.running and (not queue.empty() or not finished_scanning.is_set()):
@@ -241,3 +243,132 @@ async def _process_loc(
             f'Saved: {instance.__class__.__name__} {instance.id} '
             f'@ {hex(phys)} ({phys})'
         )
+
+
+@fs.command(name='reparse')
+@click.option('-l', '--label', help='The unique label for the filesystem')
+@click.option('-k', '--key', multiple=True, type=click.Choice(structure.KeyType.__members__),
+              help='Key types of leaf items to reparse')
+@click.option('-A', '--all', 'all_', is_flag=True, help='Select all key types')
+@click.option('--missing/--no-missing', default=True,
+              help='Whether to parse leaf items with missing structs')
+@click.option('--outdated/--no-outdated', default=True,
+              help='Whether to parse leaf items with existing structs from outdated serializers')
+# @click.option('--existing/--no-existing', default=False,
+#               help='Whether to parse leaf items with existing, up-to-date structs')
+@click.option('--parallel/--no-parallel', type=bool, default=True)
+@click.option('--workers', type=int, default=None)
+@click.option('--qsize', type=int, default=24)
+@pass_session
+async def reparse_fs(
+    session: AsyncSession,
+    label: str,
+    key: list[str],
+    all_: bool,
+    missing: bool,
+    outdated: bool,
+    # existing: bool,
+    parallel: bool,
+    workers: int | None,
+    qsize: int,
+):
+    """Reparse existing leaf items from disk images"""
+    q = sa.select(models.Filesystem).filter_by(label=label)
+    fs: Filesystem = (await session.execute(q)).scalar_one()
+    device_ids = [d.id for d in fs.devices]
+
+    # TODO:
+    #   1.
+
+    if not (key or all_):
+        return
+
+    if not (missing or outdated):
+        return
+
+    if all_:
+        key_types = list(structure.KeyType.__members__.values())
+    else:
+        key_types = [structure.KeyType(ty) for ty in key]
+
+    q = (
+        sa.select(models.LeafItem.id)
+        .select_from(models.LeafItem)
+        .join(models.Key)
+        .join(models.Address)
+        .join(models.Device)
+        .filter(
+            models.Device.id.in_(device_ids),
+            models.Key.ty.in_(key_types),
+        )
+    )
+
+    filters = []
+
+    missing_filter = models.LeafItem.struct_id.is_(None)
+    if not missing:
+        missing_filter = ~missing_filter
+    filters.append(missing_filter)
+
+    key_type_registry_entries = {
+        ty: registry.find_by_key_type(ty)
+        for ty in key_types
+    }
+    schema_versions = [
+        (sa.cast(ty, models.Key.ty.type), entry.schema.opts.version)
+        for ty, entry in key_type_registry_entries.items()
+        if entry
+    ]
+    outdated_values = sa.values(
+        sa.column('ty', models.Key.ty.type),
+        sa.column('current_version', sa.Integer),
+        name='current_versions',
+    ).data(schema_versions)
+
+    q = q.join(outdated_values, onclause=models.Key.ty == outdated_values.c.ty, isouter=True)
+    outdated_filter = models.LeafItem._version < outdated_values.c.current_version
+    if not outdated:
+        outdated_filter = ~outdated_filter
+    filters.append(outdated_filter)
+
+    q = q.filter(sa.or_(*filters))
+
+    total = (await session.execute(sa.select(sa.func.count()).select_from(q))).scalar()
+
+    pbar = tqdm(unit='struct', total=total)
+    pbar.n = 0
+
+    if parallel:
+        async with Pool(
+            processes=workers,
+            childconcurrency=1,
+            maxtasksperchild=qsize,
+        ) as pool:
+            results = pool.starmap(_multiprocess_leaf_item, await session.execute(q))
+
+            async for result in results:
+                pbar.update(1)
+                if result:
+                    pbar.write(result)
+
+    else:  # not parallel
+        q = q.with_only_columns(models.LeafItem)
+        pbar.iterable = (await session.execute(q)).scalars()
+        for leaf_item in pbar:
+            if result := await _process_leaf_item(session, leaf_item):
+                pbar.write(result)
+
+
+async def _multiprocess_leaf_item(leaf_item_id: int) -> str | None:
+    async with btrfs_recon.db.Session() as session:
+        q = sa.select(models.LeafItem).filter_by(id=leaf_item_id)
+        res = await session.execute(q)
+        leaf_item: models.LeafItem = res.scalar()
+
+        return await _process_leaf_item(session, leaf_item)
+
+
+async def _process_leaf_item(session: AsyncSession, leaf_item: models.LeafItem) -> str | None:
+    leaf_item.reparse(session=session)
+    await session.commit()
+    return f'Reparsed {leaf_item}'
