@@ -7,6 +7,7 @@ from typing import Any, BinaryIO, Generator, TYPE_CHECKING, Type
 import inflection
 import sqlalchemy as sa
 import sqlalchemy.orm as orm
+import sqlalchemy.orm.base
 from sqlalchemy.orm import declarative_base, declared_attr
 from sqlalchemy_repr import PrettyRepr, Repr
 
@@ -44,6 +45,9 @@ class RepresentableBase:
 
 
 Base = declarative_base(cls=RepresentableBase)
+
+
+_SESSION_NOT_SET = object()
 
 
 class BaseModel(Base):
@@ -87,7 +91,9 @@ class BaseStruct(BaseModel):
         entry = cls.get_registry_entry()
         return entry.struct
 
-    def parse_disk(self, *, fp: BinaryIO = None) -> structure.Struct:
+    # TODO: add get_default_contextkw, to streamline fulfilment of required Struct deets
+
+    def parse_disk(self, *, fp: BinaryIO = None, **contextkw) -> structure.Struct:
         """Parse the on-disk structure, using stored address info"""
         struct_cls = self.get_struct_class()
 
@@ -101,13 +107,18 @@ class BaseStruct(BaseModel):
             ctx = nullcontext(fp)
 
         with ctx as stream:
-            return parse_at(stream, phys, struct_cls)
+            return parse_at(stream, phys, struct_cls, **contextkw)
 
-    def reparse(self, *, fp: BinaryIO = None) -> Self:
+    def reparse(
+        self, *, fp: BinaryIO = None, session: orm.Session | None = _SESSION_NOT_SET, **contextkw
+    ) -> structure.Struct:
         """Update the current instance with info parsed from the on-disk structure"""
-        struct = self.parse_disk(fp=fp)
-        struct.to_model(instance=self, context={'device': self.address.device})
-        return self
+        if session is _SESSION_NOT_SET:
+            session = orm.base.instance_state(self).session
+
+        struct = self.parse_disk(fp=fp, **contextkw)
+        struct.to_model(instance=self, session=session, context={'device': self.address.device})
+        return struct
 
 
 class BaseLeafItemData(BaseStruct):
