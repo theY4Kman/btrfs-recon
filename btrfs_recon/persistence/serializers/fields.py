@@ -23,6 +23,8 @@ class Nested(ma.fields.Nested):  # type: ignore[no-redef]
         schema.root_schema = getattr(self.parent, 'root_schema', None) or self.parent
         schema.nesting_name = self.name
         schema._session = self.parent.session
+        schema._transient = self.parent.transient
+        schema._load_instance = self.parent._load_instance
         return schema
 
 

@@ -139,6 +139,13 @@ class BaseSchema(SQLAlchemyAutoSchema, metaclass=InheritableMetaSchemaMeta):
         for field, child_field in self._parent_instance_fields:
             if child := getattr(instance, field):
                 setattr(child, child_field, instance)
+
+        return instance
+
+    @ma.post_load
+    def make_instance_session_add(self, instance, **kwargs):
+        if not self.transient and self.session:
+            self.session.add(instance)
         return instance
 
 

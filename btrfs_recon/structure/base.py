@@ -98,8 +98,10 @@ class Struct(DataclassMixin, metaclass=_StructMeta):
         if not schema_cls:
             raise ValueError(f'No schema class configured for {self.__class__.__name__}')
 
-        schema = schema_cls(context=context)
-        return schema.load(self, session=session, instance=instance)
+        schema = schema_cls(
+            context=context, session=session, transient=not session, instance=instance
+        )
+        return schema.load(self)
 
 
 def field(
