@@ -44,7 +44,9 @@ class ParentInstanceField(Field):
         # instance to pull from
         if nesting_schema := self.parent.nesting_schema:
             # XXX: could we possibly do something other than *nothing* here?
-            nesting_schema._parent_instance_fields.append((self.parent.nesting_name, self.name))
+            nesting_schema._parent_instance_fields.add(
+                (self.parent.nesting_name, self.name, self.parent.many)
+            )
 
         return super().deserialize(value=value, attr=attr, data=data, **kwargs)
 

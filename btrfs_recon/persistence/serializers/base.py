@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+from collections.abc import Iterable
 from typing import Any, Mapping, TYPE_CHECKING, Type
 
 import marshmallow as ma
@@ -84,13 +85,23 @@ class BaseSchema(SQLAlchemyAutoSchema, metaclass=InheritableMetaSchemaMeta):
     # at any time.
     processed_data: Mapping[str, Any] | None
 
+    # Set of (nested_field_name, field_in_nested_schema, is_many) filled by ParentInstanceFields
+    # inside the schema of a Nested field within the current schema. After the make_instance hook
+    # runs, we enumerate these items and set `instance.nested_field_name.field_in_nested_schema`
+    # to our new instance.
+    #
+    # If is_many, we assume `instance.nested_field_name` will be a list, and we'll perform the
+    # assignment on every nested instance in the list.
+    #
+    _parent_instance_fields: set[tuple[str, str, bool]]
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.nesting_schema = None
         self.root_schema = None
         self.nesting_name = None
         self.processed_data = None
-        self._parent_instance_fields = []
+        self._parent_instance_fields = set()
 
     def _deserialize(self, data, *, many: bool = False, **kwargs):
         if many:
@@ -136,9 +147,14 @@ class BaseSchema(SQLAlchemyAutoSchema, metaclass=InheritableMetaSchemaMeta):
 
     @ma.post_load
     def make_instance_post_fulfill_parent_instance_fields(self, instance, **kwargs):
-        for field, child_field in self._parent_instance_fields:
-            if child := getattr(instance, field):
-                setattr(child, child_field, instance)
+        for field, child_field, is_many in self._parent_instance_fields:
+            if nested_instance := getattr(instance, field):
+                if is_many and not isinstance(nested_instance, Iterable):
+                    raise TypeError(f'Expected {field} to be a list, found: {nested_instance}')
+
+                children = nested_instance if is_many else (nested_instance,)
+                for child in children:
+                    setattr(child, child_field, instance)
 
         return instance
 
