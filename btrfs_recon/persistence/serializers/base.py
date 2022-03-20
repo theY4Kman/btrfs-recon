@@ -265,6 +265,7 @@ def before_flush(session, flush_context, instances):
     ).data(address_struct_map.keys())
     q = (
         sa.select(
+            Address.id,
             Address.device_id,
             Address.phys,
             Address.phys_size,
@@ -298,7 +299,8 @@ def before_flush(session, flush_context, instances):
             orm.attributes.flag_dirty(struct)
 
             orm.attributes.set_committed_value(struct, 'id', address.struct_id)
-            orm.attributes.set_committed_value(struct, 'address', address)
+            orm.attributes.set_committed_value(struct, 'address', None)
+            orm.attributes.set_committed_value(struct, 'address_id', address.id)
 
         # If the existing Address row has a differing struct_type, we're superseding it, not
         # updating. So, delete the existing Address row, which will CASCADE to its referring Struct
