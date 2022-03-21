@@ -18,33 +18,36 @@ class FileExtentItem(BaseLeafItemData):
     other_encoding = sa.Column(sa.Enum(EncodingType), nullable=False)
     type = sa.Column(sa.Enum(ExtentDataType), nullable=False)
 
-    # if type == inline
+    # if type == INLINE
     data = sa.Column(pg.BYTEA)
 
-    # if type != inline
+    # if type == REGULAR
     disk_bytenr = sa.Column(fields.uint8)
     disk_num_bytes = sa.Column(fields.uint8)
     offset = sa.Column(fields.uint8)
     num_bytes = sa.Column(fields.uint8)
 
     __table_args__ = (
-        # NOTE: removed, as some scanned structs just do not abide by these
-        # sa.CheckConstraint(
-        #     ((type == ExtentDataType.INLINE)
-        #      & (data != None)
-        #      & (disk_bytenr == None)
-        #      & (disk_num_bytes == None)
-        #      & (offset == None)
-        #      & (num_bytes == None)),
-        #     name='file_extent_item_inline_data',
-        # ),
-        # sa.CheckConstraint(
-        #     ((type != ExtentDataType.INLINE)
-        #      & (data == None)
-        #      & (disk_bytenr != None)
-        #      & (disk_num_bytes != None)
-        #      & (offset != None)
-        #      & (num_bytes != None)),
-        #     name='file_extent_item_data_ref',
-        # ),
+        sa.CheckConstraint(
+            ((type != ExtentDataType.INLINE)
+             | (
+                 data.is_not(None)
+                 & disk_bytenr.is_(None)
+                 & disk_num_bytes.is_(None)
+                 & offset.is_(None)
+                 & num_bytes.is_(None)
+             )),
+            name='file_extent_item_inline_data',
+        ),
+        sa.CheckConstraint(
+            ((type != ExtentDataType.REGULAR)
+             | (
+                 data.is_(None)
+                 & disk_bytenr.is_not(None)
+                 & disk_num_bytes.is_not(None)
+                 & offset.is_not(None)
+                 & num_bytes.is_not(None)
+             )),
+            name='file_extent_item_data_ref',
+        ),
     )
