@@ -139,6 +139,11 @@ async def scan_fs(
                 start_loc=start,
                 end_loc=end,
                 reversed=reverse,
+                tqdm_kwargs=dict(
+                    desc=f'Scanning devid {device.devid}',
+                    dynamic_ncols=True,
+                    colour='blue',
+                ),
             )
 
             if parallel:
@@ -176,7 +181,14 @@ async def _scan_parallel(
 
     finished_scanning = asyncio.Event()
 
-    queue_pbar = tqdm(position=1, unit='node', total=0)
+    queue_pbar = tqdm(
+        position=1,
+        unit='node',
+        total=0,
+        dynamic_ncols=True,
+        colour='green',
+        desc='Parse found locs',
+    )
 
     async with Pool(
         processes=workers,
