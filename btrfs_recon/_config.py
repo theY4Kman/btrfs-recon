@@ -8,7 +8,7 @@ ALEMBIC_CFG_PATH = PROJECT_ROOT / 'alembic.ini'
 DB_SHELL_EXTRA_IMPORTS = [
     {'sa': 'sqlalchemy'},
     ('sqlalchemy', 'orm'),
-    ('btrfs_recon', ('structure',)),
+    ('btrfs_recon', ('structure', 'parsing')),
     ('btrfs_recon.persistence.serializers.registry', '*'),
 ]
 
