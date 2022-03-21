@@ -245,11 +245,10 @@ async def _process_loc(
     session: AsyncSession, tree_node: structure.TreeNode, device: int | models.Device
 ):
     try:
-        instance = tree_node.to_model(context={'device': device})
+        instance = tree_node.to_model(context={'device': device}, session=session)
     except ValueError:
         return
     else:
-        session.add(instance)
         await session.commit()
 
         phys = instance.address.phys
