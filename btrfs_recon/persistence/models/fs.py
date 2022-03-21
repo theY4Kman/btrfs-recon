@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import BinaryIO, TYPE_CHECKING
 
 import sqlalchemy.orm as orm
 import sqlalchemy as sa
@@ -37,3 +37,12 @@ class Filesystem(BaseModel):
             devices=[Device(path=str(Path(path).resolve())) for path in paths],
             **attrs,
         )
+
+    def open_all(
+        self, *, read: bool = True, write: bool = False, buffering: int = -1
+    ) -> list[BinaryIO]:
+        """Open file handles to all device images"""
+        return [
+            device.open(read=read, write=write, buffering=buffering)
+            for device in self.devices
+        ]
