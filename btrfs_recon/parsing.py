@@ -13,15 +13,18 @@ from btrfs_recon.types import DevId, PhysicalAddress
 from btrfs_recon.util.chunk_cache import ChunkTreeCache
 
 
-def parse_fs(*device_handles: BinaryIO) -> tuple[Superblock, ChunkTreeCache]:
+def parse_fs(*device_handles: BinaryIO, pos: int = 0x10_000) -> tuple[Superblock, ChunkTreeCache]:
     if not device_handles:
         raise ValueError('Please pass at least one device/image file handle')
 
+    superblock: Superblock | None = None
     devid_fp_map: dict[int, BinaryIO] = {}
     for fp in device_handles:
-        superblock = parse_at(fp, 0x10_000, Superblock)
+        superblock = parse_at(fp, pos, Superblock)
         dev_item = superblock.dev_item
         devid_fp_map[dev_item.devid] = fp
+
+    assert superblock
 
     tree = ChunkTreeCache()
     for sys_chunk in superblock.sys_chunks:
@@ -37,11 +40,6 @@ def parse_fs(*device_handles: BinaryIO) -> tuple[Superblock, ChunkTreeCache]:
         fp = devid_fp_map[devid]
         node = parse_at(fp, physical, TreeNode)
 
-        # print(f'=== CHUNK TREE ITEM: {hex(physical)} ({physical})')
-        # print(chunk_tree_item)
-        # print(f'===')
-        # print()
-
         # Leaf node
         if node.header.level == 0:
             for item in node['items']:
@@ -54,10 +52,10 @@ def parse_fs(*device_handles: BinaryIO) -> tuple[Superblock, ChunkTreeCache]:
                     item.data.stripes,
                 )
 
-                # print(f'=== CHUNK: {hex(chunk_physical)} ({chunk_physical})')
-                # print(chunk)
-                # print(f'===')
-                # print()
+                print(f'=== CHUNK: {item.phys_start} (in node @ {node.phys_start})')
+                print(item)
+                print(f'===')
+                print()
 
         # Internal node (level != 0)
         else:
@@ -161,6 +159,9 @@ async def find_nodes(
         for loc in pbar:
             # Yield to event loop
             await asyncio.sleep(0)
+
+            if show_progress:
+                pbar.set_postfix_str(hex(loc))
 
             header = parse_at(fp, loc, Header)
             if fsid is not None and header.fsid != fsid:

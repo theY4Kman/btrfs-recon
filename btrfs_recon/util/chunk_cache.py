@@ -1,9 +1,14 @@
-from typing import Iterable
+from __future__ import annotations
+
+from typing import Iterable, TYPE_CHECKING
 
 import construct as cs
 from intervaltree import Interval, IntervalTree
 
 from btrfs_recon.types import DevId, PhysicalAddress
+
+if TYPE_CHECKING:
+    from btrfs_recon import structure
 
 
 class ChunkTreeCache(IntervalTree):
@@ -11,14 +16,20 @@ class ChunkTreeCache(IntervalTree):
         self,
         logical: int,
         size: int,
-        stripes: Iterable[tuple[DevId, PhysicalAddress]] | dict[DevId, PhysicalAddress] | Iterable[cs.Container]
+        stripes: (
+            Iterable[tuple[DevId, PhysicalAddress]]
+            | dict[DevId, PhysicalAddress]
+            | Iterable[cs.Container | structure.Stripe]
+        ),
     ) -> Interval:
         """Record a mapping of logical -> physical for a block of logical address space"""
+        from btrfs_recon import structure
+
         if not isinstance(stripes, dict):
             stripes = tuple(stripes)
             assert stripes
 
-            if isinstance(stripes[0], cs.Container):
+            if isinstance(stripes[0], (cs.Container, structure.Stripe)):
                 stripes = {stripe.devid: stripe.offset for stripe in stripes}
 
         begin = logical
