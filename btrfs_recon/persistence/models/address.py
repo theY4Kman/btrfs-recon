@@ -42,4 +42,8 @@ class Address(BaseModel):
             struct_type, struct_id,
             name='address_uniq_struct_ref',
         ),
+
+        # Lookup indices
+        sa.Index('address_lookup_struct', struct_id, struct_type),
+        sa.Index('address_lookup_logical', bytenr),
     )

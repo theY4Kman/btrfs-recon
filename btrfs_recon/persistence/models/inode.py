@@ -55,3 +55,9 @@ class InodeRef(BaseLeafItemData):
         ),
         type_=sa.String,
     )
+
+    __table_args__ = (
+        sa.Index('inoderef_name_like', name,
+                 postgresql_using='gin', postgresql_ops={'name': 'gin_trgm_ops'}),
+        sa.Index('inoderef_ext', ext, postgresql_include=['name']),
+    )

@@ -67,6 +67,9 @@ class LeafItem(Keyed, BaseStruct):
             struct_type, struct_id,
             name='leaf_uniq_struct_ref',
         ),
+
+        # Lookup indices
+        sa.Index('leaf_lookup_struct', struct_id, struct_type),
     )
 
     def parse_disk(self, *, fp: BinaryIO = None, **contextkw) -> structure.Struct:

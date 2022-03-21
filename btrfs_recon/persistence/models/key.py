@@ -26,6 +26,11 @@ class Key(BaseStruct):
     __table_args__ = (
         # Enforce a one-to-one rel between a key and the struct it's attached to
         sa.UniqueConstraint(struct_type, struct_id, name='key_struct_ref_uniq'),
+
+        # Lookup indices
+        sa.Index('key_lookup_struct', struct_type, struct_id),
+        sa.Index('key_lookup_ty', ty),
+        sa.Index('key_lookup_objectid', objectid),
     )
 
 
