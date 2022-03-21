@@ -192,7 +192,7 @@ async def _scan_parallel(
             args = (device.path, device_id, loc)
             if msg := await pool.apply(_multiprocess_loc, args=args):
                 log(msg)
-            queue_pbar.n += 1
+            queue_pbar.update(1)
 
             # Remove an item from the pending queue, freeing the queue master
             # to retrieve another item
