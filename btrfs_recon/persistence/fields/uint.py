@@ -1,8 +1,9 @@
+import asyncio
 from typing import Any, Optional
 
 import psycopg
 import sqlalchemy as sa
-from psycopg import postgres
+from psycopg import adapt
 from psycopg.types import TypeInfo
 from psycopg.types.numeric import _NumberDumper, IntLoader
 from sqlalchemy.dialects.postgresql.psycopg import _PGInteger
@@ -17,24 +18,37 @@ __all__ = [
 ]
 
 
-def init_dbapi_types(dbapi_conn: psycopg.Connection):
-    for typename in 'uint1', 'uint2', 'uint4', 'uint8':
-        t = TypeInfo.fetch(dbapi_conn, typename)
+def _register_uint_dbapi_type(dbapi_conn: psycopg.Connection, t: TypeInfo):
+    class UintDumper(_NumberDumper):
+        oid = t.oid
+
+    adapters_map = dbapi_conn.adapters
+    t.register(adapters_map)
+
+    adapters_map.register_dumper(int, UintDumper)
+    adapters_map.register_loader(t.oid, IntLoader)
+
+
+def register_uint_dbapi_types(dbapi_conn: psycopg.Connection, type_infos: dict[str, TypeInfo | None]):
+    for typename, t in type_infos.items():
         if t is None:
             raise RuntimeError(
                 f'Unable to fetch {typename} type from Postgres. '
                 f'Has the pguint extension been installed?'
             )
 
-        class UintDumper(_NumberDumper):
-            oid = t.oid
+        _register_uint_dbapi_type(dbapi_conn, t)
 
-        postgres.adapters.register_dumper(int, UintDumper)
-        postgres.adapters.register_loader(t.oid, IntLoader)
+
+def get_uint_type_infos(dbapi_conn: psycopg.Connection) -> dict[str, TypeInfo | None]:
+    return {
+        typename: TypeInfo.fetch(dbapi_conn, typename)
+        for typename in ('uint1', 'uint2', 'uint4', 'uint8')
+    }
 
 
 class PGUnsignedInteger(_PGInteger):
-    render_bind_cast = False
+    render_bind_cast = True
 
 
 class uint(sa.TypeDecorator):
