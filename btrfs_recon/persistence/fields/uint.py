@@ -5,6 +5,7 @@ import sqlalchemy as sa
 from psycopg import adapt
 from psycopg.types import TypeInfo
 from psycopg.types.numeric import _NumberDumper, IntLoader
+from sqlalchemy.dialects.postgresql.base import ischema_names
 from sqlalchemy.dialects.postgresql.psycopg import PGDialect_psycopg, _PGInteger
 from sqlalchemy.engine import Dialect
 from sqlalchemy.ext.compiler import compiles
@@ -92,6 +93,14 @@ class uint4(PGUnsignedInteger):
 
 class uint8(PGUnsignedInteger):
     sqltype = 'uint8'
+
+
+ischema_names.update({
+    'uint1': uint1,
+    'uint2': uint2,
+    'uint4': uint4,
+    'uint8': uint8,
+})
 
 
 @compiles(PGUnsignedInteger, 'postgresql')
