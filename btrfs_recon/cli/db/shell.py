@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib
+import re
 import sys
 from collections import defaultdict
 from datetime import datetime
@@ -217,7 +218,10 @@ def install_sqlalchemy_sql_printer() -> None:
             class LiteralCompiler(compiler_base):  # type: ignore[valid-type,misc]
                 def visit_bindparam(self, bindparam, within_columns_clause=False, literal_binds=False, **kwargs):
                     return super().render_literal_bindparam(
-                        bindparam, within_columns_clause=within_columns_clause, literal_binds=literal_binds, **kwargs
+                        bindparam,
+                        within_columns_clause=within_columns_clause,
+                        literal_binds=literal_binds,
+                        **kwargs,
                     )
 
                 def render_literal_value(self, value, type_):
@@ -246,10 +250,19 @@ def install_sqlalchemy_sql_printer() -> None:
     def build_clause_element(sql: str, parameters: Union[dict, tuple, list]) -> ClauseElement:
         if isinstance(parameters, dict):
             bindparams = parameters
+            bp_fmt_vars = {s: f":{s}" for s in bindparams}
+            sql = sql % bp_fmt_vars
+            to_escape = bp_fmt_vars.values()
         else:
             bindparams = {f"var{n}": value for n, value in enumerate(parameters)}
+            to_escape = tuple(f":{s}" for s in bindparams)
+            sql = sql % to_escape
 
-        sql = sql % tuple(f":{s}" for s in bindparams)
+        # Ensure any bindparams followed by colons are properly enclosed in parentheses, and any
+        # colons not intended for bindparams are properly escaped. Otherwise, SQLAlchemy won't
+        # recognize the bindparams.
+        # e.g. ':param_1::INTEGER' should become '(:param_1)\:\:INTEGER'
+        sql = re.sub('(' + '|'.join(to_escape) + ')(?=:)', r'(\1)', sql)
 
         parsed_stmt = text(sql)
         return parsed_stmt.bindparams(**bindparams)
