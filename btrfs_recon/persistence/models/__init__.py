@@ -12,6 +12,8 @@ from .physical import *
 from .superblock import *
 from .tree_node import *
 
+from .chunk_tree import ChunkTree
+
 # TODO: ExtentItem
 # TODO: RootItem
 # TODO: RootRef
