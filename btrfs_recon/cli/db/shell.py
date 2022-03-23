@@ -19,7 +19,7 @@ from sqlalchemy.sql import ClauseElement
 from sqlalchemy.sql.compiler import SQLCompiler
 
 from btrfs_recon import _config
-from btrfs_recon.persistence.models import BaseModel
+from btrfs_recon.persistence.models import Base
 from btrfs_recon.types import ImportItem
 from .base import db, pass_session
 
@@ -134,11 +134,11 @@ def import_items(items: Iterable[ImportItem]) -> tuple[dict[str, Any], list[str]
     return imported_names, import_statements
 
 
-def get_all_models() -> list[Type[BaseModel]]:
+def get_all_models() -> list[Type[Base]]:
     return [
         mapper.class_
-        for mapper in BaseModel._sa_registry.mappers
-        if isinstance(mapper.class_, type) and issubclass(mapper.class_, BaseModel)
+        for mapper in Base._sa_registry.mappers
+        if isinstance(mapper.class_, type) and issubclass(mapper.class_, Base)
     ]
 
 
