@@ -18,12 +18,7 @@ __all__ = [
 
 
 def _register_uint_dbapi_type(adapters_map: adapt.AdaptersMap, t: TypeInfo):
-    class UintDumper(_NumberDumper):
-        oid = t.oid
-
     t.register(adapters_map)
-
-    adapters_map.register_dumper(int, UintDumper)
     adapters_map.register_loader(t.oid, IntLoader)
 
 
