@@ -7,6 +7,7 @@ Create Date: ${create_date}
 """
 from alembic import op
 import sqlalchemy as sa
+import btrfs_recon.persistence.fields
 ${imports if imports else ""}
 
 # revision identifiers, used by Alembic.
