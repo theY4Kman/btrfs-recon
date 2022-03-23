@@ -1,12 +1,11 @@
-import asyncio
-from typing import Any, Optional
+from typing import Any
 
 import psycopg
 import sqlalchemy as sa
 from psycopg import adapt
 from psycopg.types import TypeInfo
 from psycopg.types.numeric import _NumberDumper, IntLoader
-from sqlalchemy.dialects.postgresql.psycopg import _PGInteger
+from sqlalchemy.dialects.postgresql.psycopg import PGDialect_psycopg, _PGInteger
 from sqlalchemy.engine import Dialect
 from sqlalchemy.ext.compiler import compiles
 
@@ -18,18 +17,17 @@ __all__ = [
 ]
 
 
-def _register_uint_dbapi_type(dbapi_conn: psycopg.Connection, t: TypeInfo):
+def _register_uint_dbapi_type(adapters_map: adapt.AdaptersMap, t: TypeInfo):
     class UintDumper(_NumberDumper):
         oid = t.oid
 
-    adapters_map = dbapi_conn.adapters
     t.register(adapters_map)
 
     adapters_map.register_dumper(int, UintDumper)
     adapters_map.register_loader(t.oid, IntLoader)
 
 
-def register_uint_dbapi_types(dbapi_conn: psycopg.Connection, type_infos: dict[str, TypeInfo | None]):
+def register_uint_dbapi_types(adapters_map: adapt.AdaptersMap, type_infos: dict[str, TypeInfo | None]):
     for typename, t in type_infos.items():
         if t is None:
             raise RuntimeError(
@@ -37,7 +35,7 @@ def register_uint_dbapi_types(dbapi_conn: psycopg.Connection, type_infos: dict[s
                 f'Has the pguint extension been installed?'
             )
 
-        _register_uint_dbapi_type(dbapi_conn, t)
+        _register_uint_dbapi_type(adapters_map, t)
 
 
 def get_uint_type_infos(dbapi_conn: psycopg.Connection) -> dict[str, TypeInfo | None]:
@@ -47,45 +45,60 @@ def get_uint_type_infos(dbapi_conn: psycopg.Connection) -> dict[str, TypeInfo | 
     }
 
 
+_uint_type_infos: dict[str, TypeInfo | None] = {}
+
+
+def init_uint_types(dbapi_conn: psycopg.Connection, *dialects: PGDialect_psycopg):
+    _uint_type_infos.update(get_uint_type_infos(dbapi_conn))
+
+    for dialect in dialects:
+        register_uint_dbapi_types(dialect._psycopg_adapters_map, _uint_type_infos)
+
+
 class PGUnsignedInteger(_PGInteger):
+    __visit_name__ = 'uint'
     render_bind_cast = True
 
+    sqltype = 'uint'
 
-class uint(sa.TypeDecorator):
-    impl = PGUnsignedInteger
+    def _compiler_dispatch(self, visitor, **kw):
+        """Look for an attribute named "visit_<visit_name>" on the
+        visitor, and call it with the same kw params.
 
-    def bind_expression(self, bindparam: Any) -> Any:
-        return sa.cast(bindparam, self.__class__)
+        """
+        try:
+            return visitor.visit_uint(self, **kw)
+        except AttributeError:
+            return self.sqltype
 
-    def process_result_value(self, value: Any, dialect: Dialect) -> Optional[int]:
-        if value is not None:
-            return int(value)
+    def result_processor(self, dialect: Dialect, coltype: Any):
 
+        def process(value):
+            if value is not None:
+                return int(value)
 
-class uint1(uint):
-    __visit_name__ = 'uint1'  # type: ignore[misc]
-    cache_ok = True
+        return process
 
-
-class uint2(uint):
-    __visit_name__ = 'uint2'  # type: ignore[misc]
-    cache_ok = True
-
-
-class uint4(uint):
-    __visit_name__ = 'uint4'  # type: ignore[misc]
-    cache_ok = True
+    def bind_expression(self, bindvalue: Any) -> Any:
+        return sa.cast(bindvalue, self)
 
 
-class uint8(uint):
-    __visit_name__ = 'uint8'  # type: ignore[misc]
-    cache_ok = True
+class uint1(PGUnsignedInteger):
+    sqltype = 'uint1'
 
 
-@compiles(uint, 'postgresql')
-@compiles(uint1, 'postgresql')
-@compiles(uint2, 'postgresql')
-@compiles(uint4, 'postgresql')
-@compiles(uint8, 'postgresql')
+class uint2(PGUnsignedInteger):
+    sqltype = 'uint2'
+
+
+class uint4(PGUnsignedInteger):
+    sqltype = 'uint4'
+
+
+class uint8(PGUnsignedInteger):
+    sqltype = 'uint8'
+
+
+@compiles(PGUnsignedInteger, 'postgresql')
 def compile_pg_uint(element, compiler, **kwargs):
-    return element.__visit_name__
+    return element.sqltype
