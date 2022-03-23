@@ -43,6 +43,10 @@ class RepresentableBase:
     def __repr__(self) -> str:
         return _shared_repr.repr(self)
 
+    @declared_attr
+    def __tablename__(cls) -> str:
+        return inflection.underscore(cls.__name__)
+
 
 Base = declarative_base(cls=RepresentableBase)
 
@@ -53,10 +57,6 @@ _SESSION_NOT_SET = object()
 class BaseModel(Base):
     __abstract__ = True
     __table__: sa.Table
-
-    @declared_attr
-    def __tablename__(cls) -> str:
-        return inflection.underscore(cls.__name__)
 
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
 
