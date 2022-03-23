@@ -300,7 +300,7 @@ def install_sqlalchemy_sql_printer() -> None:
 
 
 def print_chunked(
-    *parts, sep: str = " ", end: str = "\n", chunk_size: int = 1024, file=sys.stdout, flush=False
+    *parts, sep: str = " ", end: str = "\n", chunk_size: int = 1024, file=sys.__stdout__, flush=False
 ) -> None:
     """print() in chunks to avoid BlockingIOError
 
