@@ -14,8 +14,9 @@ if TYPE_CHECKING:
 class ChunkTreeCache(IntervalTree):
     def insert(
         self,
-        logical: int,
-        size: int,
+        log_start: int,
+        log_end: int,
+        stripe_len: int,
         stripes: (
             Iterable[tuple[DevId, PhysicalAddress]]
             | dict[DevId, PhysicalAddress]
@@ -30,21 +31,23 @@ class ChunkTreeCache(IntervalTree):
             assert stripes
 
             if isinstance(stripes[0], (cs.Container, structure.Stripe)):
-                stripes = {stripe.devid: stripe.offset for stripe in stripes}
+                stripes = [(stripe.devid, stripe.offset) for stripe in stripes]
 
-        begin = logical
-        end = begin + size
-        if matches := self[begin:end]:
+        if matches := self[log_start:log_end]:
             assert len(matches) == 1
             ival, = matches
-            ival.data.update(stripes)
+            ival.data['stripe_len'] = stripe_len
+            ival.data['stripes'] = stripes
         else:
-            ival = Interval(begin, end, dict(stripes))
+            ival = Interval(log_start, log_end, {
+                'stripe_len': stripe_len,
+                'stripes': stripes,
+            })
             self.add(ival)
 
         return ival
 
-    def offsets(self, logical: int) -> dict[DevId, PhysicalAddress]:
+    def offsets(self, logical: int, size: int = 1) -> Iterable[tuple[DevId, PhysicalAddress, int]]:
         """Return the mapped physical addresses for the given logical address
 
         This method will offset the physical address if the logical address is in the middle of a
@@ -58,11 +61,27 @@ class ChunkTreeCache(IntervalTree):
             raise KeyError(f'Unable to find physical address mapping for logical address {logical}')
 
         block = next(iter(blocks))
-        offset = logical - block.begin
-        return {
-            devid: physical_start + offset
-            for devid, physical_start in block.data.items()
-        }
+
+        stripe_len = block.data['stripe_len']
+        stripes = block.data['stripes']
+        num_stripes = len(stripes)
+
+        log_offset = logical - block.begin
+        pre_stripe_units = log_offset // stripe_len
+        stripe_offset = log_offset % stripe_len
+
+        while size > 0:
+            n_stripe_units = pre_stripe_units // num_stripes
+            stripe_idx = pre_stripe_units % num_stripes
+            (devid, chunk_phys) = stripes[stripe_idx]
+
+            num_bytes = min(size, stripe_len, stripe_len - stripe_offset)
+            phys = chunk_phys + n_stripe_units * stripe_len + stripe_offset
+            yield devid, phys, num_bytes
+
+            pre_stripe_units += 1
+            stripe_offset = 0
+            size -= num_bytes
 
     def reverse_trees(self) -> dict[DevId, IntervalTree]:
         """Return a tree mapping physical -> logical for each device in the cache"""
