@@ -89,7 +89,7 @@ def import_items(items: Iterable[ImportItem]) -> tuple[dict[str, Any], list[str]
 
         elif isinstance(item, dict):
             for alias, modname in item.items():
-                value = __import__(modname)
+                value = importlib.import_module(modname)
                 imported_names[alias] = value
                 import_statements.append(f"import {modname} as {alias}")
 
