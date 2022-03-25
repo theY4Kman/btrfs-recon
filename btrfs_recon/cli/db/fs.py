@@ -104,9 +104,9 @@ async def sync_fs(session: AsyncSession, label: str):
 @click.option('-a', '--alignment', type=int, default=0x10_000)
 @click.option('-s', '--start', type=HEX_DEC_INT, default=None)
 @click.option('-e', '--end', type=HEX_DEC_INT, default=None)
-@click.option('--reverse/--forward', type=bool, default=True)
+@click.option('-r/-f', '--reverse/--forward', type=bool, default=False)
 @click.option('--parallel/--no-parallel', type=bool, default=True)
-@click.option('--workers', type=int, default=None)
+@click.option('-w', '--workers', type=int, default=None)
 @click.option('--qsize', type=int, default=24)
 @click.option('--scan-qsize', type=int, default=1_000)
 @pass_session
@@ -282,7 +282,7 @@ async def _process_loc(
 # @click.option('--existing/--no-existing', default=False,
 #               help='Whether to parse leaf items with existing, up-to-date structs')
 @click.option('--parallel/--no-parallel', type=bool, default=True)
-@click.option('--workers', type=int, default=None)
+@click.option('-w', '--workers', type=int, default=None)
 @click.option('--qsize', type=int, default=24)
 @pass_session
 async def reparse_fs(
