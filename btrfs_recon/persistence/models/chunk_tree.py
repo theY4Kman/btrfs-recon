@@ -8,6 +8,7 @@ import sqlalchemy.orm as orm
 from sqlalchemy.dialects.postgresql import aggregate_order_by
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from btrfs_recon import structure
 from btrfs_recon.types import DevId, PhysicalAddress
 from btrfs_recon.util.properties import classproperty
 from btrfs_recon.util.chunk_cache import ChunkTreeCache
@@ -22,11 +23,18 @@ class ChunkTree(MaterializedView):
     generation = sa.Column(fields.uint8)
     log_start = sa.Column(fields.uint8)
     log_end = sa.Column(fields.uint8)
+    length = sa.Column(fields.uint8)
     stripe_len = sa.Column(fields.uint8)
     num_stripes = sa.Column(fields.uint2)
     stripes: orm.Mapped[tuple[tuple[DevId, PhysicalAddress], ...]] = sa.Column(
         sa.ARRAY(fields.uint8, dimensions=2, as_tuple=True)
     )
+
+    # Individual boolean columns for each flag value
+    locals().update({
+        f'has_{_flag.name}_flag': sa.Column(sa.Boolean)
+        for _flag in structure.BlockGroupFlag
+    })
 
     @orm.declared_attr
     def __query__(cls) -> sa.sql.Select:
@@ -41,15 +49,23 @@ class ChunkTree(MaterializedView):
             )
         )
 
+        flag_fields = [
+            col
+            for col in sa.inspect(ChunkItem).attrs
+            if col.key.startswith('has_') and col.key.endswith('_flag')
+        ]
+
         return (
             sa.select(
                 ChunkItem.id,
                 TreeNode.generation,
                 log_start,
                 log_end,
+                ChunkItem.length,
                 ChunkItem.stripe_len,
                 ChunkItem.num_stripes,
                 stripes.label('stripes'),
+                *flag_fields,
             )
             .select_from(LeafItem)
             .join(TreeNode)
