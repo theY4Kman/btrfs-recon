@@ -1,13 +1,17 @@
+from __future__ import annotations
+
 from contextlib import nullcontext
 from pathlib import Path
 from typing import BinaryIO, TYPE_CHECKING
 
 import sqlalchemy as sa
 import sqlalchemy.orm as orm
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from btrfs_recon import structure
 from btrfs_recon.parsing import parse_at
 from btrfs_recon.persistence import fields
+from btrfs_recon.types import DevId
 from .base import BaseModel
 
 if TYPE_CHECKING:
@@ -24,6 +28,13 @@ class Device(BaseModel):
     label = sa.Column(sa.String)
 
     devid = sa.Column(fields.uint8)
+
+    @classmethod
+    async def devid_map(cls, session: AsyncSession) -> dict[DevId, Device]:
+        q = sa.select(cls)
+        res = await session.execute(q)
+        devices = res.scalars()
+        return {d.devid: d for d in devices}
 
     def __str__(self) -> str:
         if self.label:

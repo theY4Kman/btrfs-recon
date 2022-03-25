@@ -1,11 +1,18 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import sqlalchemy as sa
 from sqlalchemy import func
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from btrfs_recon import structure
 from btrfs_recon.persistence import fields
 from .base import BaseLeafItemData
+
+if TYPE_CHECKING:
+    from btrfs_recon.persistence.models import FileExtentItem
+
 
 __all__ = [
     'InodeItem',
@@ -39,6 +46,26 @@ class InodeItem(BaseLeafItemData):
             sa.Computed(flags.op('&')(_flag.value) != 0), type_=sa.Boolean
         )
     del _flag
+
+    async def get_file_extent_item(self, session: AsyncSession) -> FileExtentItem | None:
+        from btrfs_recon.persistence.models import FileExtentItem, Key, LeafItem
+        q = (
+            sa.select(FileExtentItem)
+            .join(LeafItem)
+            .join(Key)
+            .filter_by(objectid=self.objectid)
+            .order_by(FileExtentItem.generation.desc())
+        )
+        res = await session.execute(q.limit(1))
+        return res.scalar_one_or_none()
+
+    async def read_bytes(self, session: AsyncSession) -> bytes | None:
+        if fei := await self.get_file_extent_item(session):
+            return await fei.read_bytes(session, size=self.nbytes)
+
+    async def read_text(self, session: AsyncSession, *, encoding: str = 'utf8') -> str | None:
+        if fei := await self.get_file_extent_item(session):
+            return await fei.read_text(session, size=self.nbytes, encoding=encoding)
 
 
 class InodeRef(BaseLeafItemData):
