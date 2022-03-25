@@ -8,6 +8,7 @@ import inflection
 import sqlalchemy as sa
 import sqlalchemy.orm as orm
 import sqlalchemy.orm.base
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import declarative_base, declared_attr
 from sqlalchemy_repr import PrettyRepr, Repr
 
@@ -17,6 +18,7 @@ from btrfs_recon.parsing import parse_at
 if TYPE_CHECKING:
     from btrfs_recon.persistence.serializers import StructSchema, registry
     from .address import Address
+    from .key import Key
     from .tree_node import LeafItem
 
 __all__ = [
@@ -126,4 +128,30 @@ class BaseLeafItemData(BaseStruct):
     __abstract__ = True
 
     leaf_item_id: declared_attr[int] = declared_attr(lambda cls: sa.Column(sa.ForeignKey('leaf_item.id'), nullable=False))
-    leaf_item: declared_attr[LeafItem] = declared_attr(lambda cls: orm.relationship('LeafItem'))
+    leaf_item: declared_attr[LeafItem] = declared_attr(lambda cls: orm.relationship('LeafItem', lazy='joined'))
+
+    @hybrid_property
+    def key(self) -> Key:
+        return self.leaf_item.key
+
+    @key.expression
+    def key(cls):
+        from btrfs_recon.persistence import Key
+        # XXX: does this make any sense?
+        return Key
+
+    @hybrid_property
+    def objectid(self) -> int:
+        return self.key.objectid
+
+    @objectid.expression
+    def objectid(cls):
+        return cls.key.objectid
+
+    @hybrid_property
+    def offset(self) -> int:
+        return self.key.offset
+
+    @offset.expression
+    def offset(cls):
+        return cls.key.offset
