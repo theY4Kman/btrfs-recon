@@ -1,6 +1,8 @@
+from pathlib import Path
 from typing import Collection, Literal
 
 DevId = int
+ImagePath = str | Path
 PhysicalAddress = int
 
 

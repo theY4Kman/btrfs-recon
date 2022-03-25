@@ -6,6 +6,7 @@ import asyncclick as click
 import construct as cs
 import sqlalchemy as sa
 from aiomultiprocess import Pool
+from aiomultiprocess.types import ProxyException
 from sqlalchemy.ext.asyncio import AsyncSession
 from tqdm import tqdm
 from tui_progress import timed_subtask
@@ -14,6 +15,7 @@ import btrfs_recon.db
 from btrfs_recon import structure
 from btrfs_recon.parsing import FindNodesLogFunc, find_nodes, parse_at
 from btrfs_recon.persistence import Filesystem, models, registry
+from btrfs_recon.types import DevId, ImagePath, PhysicalAddress
 
 from .base import db, pass_session
 from ..types import HEX_DEC_INT
@@ -178,6 +180,7 @@ async def _scan_parallel(
 ):
     queue = asyncio.Queue(maxsize=scan_qsize)
     pending_queue = asyncio.Queue(maxsize=qsize)
+    failures: list[tuple[ImagePath, DevId, PhysicalAddress, str]] = []
 
     finished_scanning = asyncio.Event()
 
@@ -202,8 +205,16 @@ async def _scan_parallel(
                 return
 
             args = (device.path, device_id, loc)
-            if msg := await pool.apply(_multiprocess_loc, args=args):
-                log(msg)
+            try:
+                result = await pool.apply(_multiprocess_loc, args=args)
+            except ProxyException as e:
+                tb = e.args[0]
+                failures.append(args + (tb,))
+                log(f'Failed to process {args}:\n\n' + tb)
+            else:
+                if result:
+                    log(result)
+
             queue_pbar.update(1)
 
             # Remove an item from the pending queue, freeing the queue master
@@ -239,6 +250,14 @@ async def _scan_parallel(
         finished_scanning.set()
 
         await processor
+
+        if failures:
+            print(f'Encountered {len(failures)} failure(s)\n\n')
+
+            for (*args, tb) in failures:
+                print(args, '\n', tb, '\n\n')
+
+            print(f'Encountered {len(failures)} failure(s)\n\n')
 
 
 async def _multiprocess_loc(image_path: str, device_id: int, loc: int):
