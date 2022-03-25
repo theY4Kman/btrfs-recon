@@ -14,7 +14,7 @@ __all__ = ['DirItem']
 
 class DirItem(BaseLeafItemData):
     location_id: orm.Mapped[int] = sa.Column(sa.ForeignKey(Key.id), nullable=False)
-    location: orm.Mapped[Key] = orm.relationship(Key, lazy='joined')
+    location: orm.Mapped[Key] = orm.relationship(Key, lazy='joined', innerjoin=True)
 
     transid = sa.Column(fields.uint8, nullable=False)
     data_len = sa.Column(fields.uint2, nullable=False)

@@ -72,8 +72,12 @@ class BaseStruct(BaseModel):
 
     _version = sa.Column(sa.Integer, server_default='0', doc="Version number of this model's serializer at time of parsing")
 
-    address_id: declared_attr[int] = declared_attr(lambda cls: sa.Column(sa.ForeignKey('address.id'), nullable=False))
-    address: declared_attr[Address] = declared_attr(lambda cls: orm.relationship('Address', lazy='joined'))
+    address_id: declared_attr[int] = declared_attr(
+        lambda cls: sa.Column(sa.ForeignKey('address.id'), nullable=False)
+    )
+    address: declared_attr[Address] = declared_attr(
+        lambda cls: orm.relationship('Address', lazy='joined', innerjoin=True)
+    )
 
     @classmethod
     def get_registry_entry(cls) -> registry.RegistryEntry:
@@ -127,8 +131,12 @@ class BaseLeafItemData(BaseStruct):
     """Base model for all items specified in leaf nodes"""
     __abstract__ = True
 
-    leaf_item_id: declared_attr[int] = declared_attr(lambda cls: sa.Column(sa.ForeignKey('leaf_item.id'), nullable=False))
-    leaf_item: declared_attr[LeafItem] = declared_attr(lambda cls: orm.relationship('LeafItem', lazy='joined'))
+    leaf_item_id: declared_attr[int] = declared_attr(
+        lambda cls: sa.Column(sa.ForeignKey('leaf_item.id'), nullable=False)
+    )
+    leaf_item: declared_attr[LeafItem] = declared_attr(
+        lambda cls: orm.relationship('LeafItem', lazy='joined', innerjoin=True)
+    )
 
     @hybrid_property
     def key(self) -> Key:

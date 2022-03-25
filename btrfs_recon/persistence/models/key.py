@@ -37,5 +37,9 @@ class Key(BaseStruct):
 
 @declarative_mixin
 class Keyed:
-    key_id: declared_attr[int] = declared_attr(lambda cls: sa.Column(sa.ForeignKey(Key.id), nullable=False))
-    key: declared_attr[Key] = declared_attr(lambda cls: orm.relationship(Key, lazy='joined'))
+    key_id: declared_attr[int] = declared_attr(
+        lambda cls: sa.Column(sa.ForeignKey(Key.id), nullable=False)
+    )
+    key: declared_attr[Key] = declared_attr(
+        lambda cls: orm.relationship(Key, lazy='joined', innerjoin=True)
+    )
