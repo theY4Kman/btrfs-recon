@@ -31,6 +31,7 @@ class Key(BaseStruct):
         sa.Index('key_lookup_struct', struct_type, struct_id),
         sa.Index('key_lookup_ty', ty),
         sa.Index('key_lookup_objectid', objectid),
+        sa.Index('key_lookup_offset', offset),
     )
 
 
