@@ -125,11 +125,19 @@ async def find_nodes(
     max_int_length = len(f'{file_size}')
 
     if reversed:
+        if start_loc < end_loc:
+            start_loc, end_loc = end_loc, start_loc
+
         start_loc = aligned_max_loc if start_loc is None else start_loc
+        start_loc = start_loc + alignment - (start_loc % alignment)
         end_loc = -1 if end_loc is None else end_loc - 1
         loc_iter = range(start_loc, end_loc, -alignment)
     else:
+        if start_loc > end_loc:
+            start_loc, end_loc = end_loc, start_loc
+
         start_loc = 0 if start_loc is None else start_loc
+        start_loc = start_loc - (start_loc % alignment)
         end_loc = aligned_max_loc + 1 if end_loc is None else end_loc + 1
         loc_iter = range(start_loc, end_loc, alignment)
 
