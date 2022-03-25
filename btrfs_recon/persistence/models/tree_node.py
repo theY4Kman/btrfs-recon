@@ -34,6 +34,11 @@ class TreeNode(BaseStruct):
     key_ptrs: orm.Mapped[KeyPtr] = orm.relationship('KeyPtr', foreign_keys='KeyPtr.parent_id', back_populates='parent', uselist=True)
     parent_key_ptrs: orm.Mapped[KeyPtr] = orm.relationship('KeyPtr', foreign_keys='KeyPtr.ref_node_id', viewonly=True, uselist=True)
 
+    __table_args__ = (
+        # Used to order LeafItems by generation with Index-Only Scans
+        sa.Index('treenode_passthru_generation', 'id', generation),
+    )
+
 
 class KeyPtr(Keyed, BaseStruct):
     parent_id: orm.Mapped[int] = sa.Column(sa.ForeignKey(TreeNode.id), nullable=False)
