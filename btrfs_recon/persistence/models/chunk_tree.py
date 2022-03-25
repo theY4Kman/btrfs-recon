@@ -81,16 +81,24 @@ class ChunkTree(MaterializedView):
         return cls._cache
 
     @classmethod
-    def refresh_cache(cls, session: AsyncSession | orm.Session) -> Awaitable[None] | None:
+    def refresh_cache(
+        cls, session: AsyncSession | orm.Session, *, force: bool = False
+    ) -> Awaitable[None] | None:
         if isinstance(session, AsyncSession):
-            return cls._refresh_cache_async(session)
-        else:
-            res = session.execute(sa.select(ChunkTree))
-            chunks = res.scalars()
-            cls.fill_cache(chunks)
+            return cls._refresh_cache_async(session, force=force)
+
+        if cls._cache and not force:
+            return
+
+        res = session.execute(sa.select(ChunkTree))
+        chunks = res.scalars()
+        cls.fill_cache(chunks)
 
     @classmethod
-    async def _refresh_cache_async(cls, session: AsyncSession) -> None:
+    async def _refresh_cache_async(cls, session: AsyncSession, *, force: bool = False) -> None:
+        if cls._cache and not force:
+            return
+
         res = await session.execute(sa.select(ChunkTree))
         chunks = res.scalars()
         cls.fill_cache(chunks)
