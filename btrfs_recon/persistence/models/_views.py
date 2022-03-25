@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Type
 
 import sqlalchemy as sa
@@ -8,18 +10,39 @@ from sqlalchemy_utils import create_materialized_view, create_view, refresh_mate
 
 from .base import Base
 
+__all__ = [
+    'View',
+    'MaterializedView',
+]
+
+
+def _register_view_for_alembic(view_cls: Type[View]):
+    try:
+        query = view_cls.__query__
+    except NotImplementedError:
+        return
+    else:
+        Base.metadata.info.setdefault('views', set()).add(
+            (view_cls.__tablename__, query, view_cls.__materialized__)
+        )
+
 
 class View(Base):
     __abstract__ = True
+    __materialized__ = False
 
     @orm.declared_attr
     def __query__(cls) -> sa.sql.Select:
         """Return the query used to populate the view"""
         raise NotImplementedError
 
+    def __init_subclass__(cls, **kwargs):
+        _register_view_for_alembic(cls)
+
 
 class MaterializedView(View):
     __abstract__ = True
+    __materialized__ = True
 
     @classmethod
     async def refresh(cls, session: AsyncSession, *, concurrently: bool = False) -> None:
@@ -53,3 +76,5 @@ def on_view_class_init(mapper: orm.Mapper, cls: Type[View]):
         create_view(cls.__tablename__, cls.__query__, cls.metadata)
     else:
         raise TypeError(f'Received mapper_configured event for non-View class {cls}')
+
+    _register_view_for_alembic(cls)
