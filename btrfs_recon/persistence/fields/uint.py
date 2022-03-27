@@ -4,7 +4,7 @@ import psycopg
 import sqlalchemy as sa
 from psycopg import adapt
 from psycopg.types import TypeInfo
-from psycopg.types.numeric import _NumberDumper, IntLoader
+from psycopg.types.numeric import IntLoader
 from sqlalchemy.dialects.postgresql.base import ischema_names
 from sqlalchemy.dialects.postgresql.psycopg import PGDialect_psycopg, _PGInteger
 from sqlalchemy.engine import Dialect
@@ -53,8 +53,6 @@ def init_uint_types(dbapi_conn: psycopg.Connection, *dialects: PGDialect_psycopg
 
 class PGUnsignedInteger(_PGInteger):
     __visit_name__ = 'uint'
-    render_bind_cast = True
-
     sqltype = 'uint'
 
     def _compiler_dispatch(self, visitor, **kw):
