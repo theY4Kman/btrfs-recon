@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
+import sqlalchemy.orm as orm
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,6 +22,13 @@ __all__ = [
 
 
 class InodeItem(BaseLeafItemData):
+    # NOTE: because InodeItems may be present in RootItems, their leaf_item may be null
+    leaf_item_id = sa.Column(sa.ForeignKey('leaf_item.id'), nullable=True)
+    leaf_item = orm.relationship('LeafItem', lazy='joined')
+
+    root_item_id = sa.Column(sa.ForeignKey('root_item.id'), nullable=True)
+    root_item = orm.relationship('RootItem', foreign_keys=[root_item_id], post_update=True)
+
     generation = sa.Column(fields.uint8, nullable=False, doc='nfs style generation number')
     transid = sa.Column(fields.uint8, nullable=False, doc='transid that last touched this inode')
     size = sa.Column(fields.uint8, nullable=False)

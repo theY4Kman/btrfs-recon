@@ -5,6 +5,7 @@ from .chunk_item import *
 from .dir_item import *
 from .file_extent_item import *
 from .inode import *
+from .root_item import *
 from .superblock import *
 from .tree_node import *
 
@@ -14,6 +15,7 @@ from .chunk_item import __all__ as __chunk_item_all__
 from .dir_item import __all__ as __dir_item_all__
 from .file_extent_item import __all__ as __file_extent_item_all__
 from .inode import __all__ as __inode_all__
+from .root_item import __all__ as __root_item_all__
 from .superblock import __all__ as __superblock_all__
 from .tree_node import __all__ as __tree_node_all__
 
@@ -28,6 +30,7 @@ __all__ = [
     *__dir_item_all__,
     *__file_extent_item_all__,
     *__inode_all__,
+    *__root_item_all__,
     *__superblock_all__,
     *__tree_node_all__,
     'registry',

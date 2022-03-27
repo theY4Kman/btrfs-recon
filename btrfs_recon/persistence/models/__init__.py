@@ -9,10 +9,12 @@ from .fs import *
 from .inode import *
 from .key import *
 from .physical import *
+from .root_item import *
 from .superblock import *
 from .tree_node import *
 
 from .chunk_tree import ChunkTree
 
+# TODO: ExtentItem
 # TODO: RootItem
 # TODO: RootRef

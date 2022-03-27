@@ -2,13 +2,21 @@ from datetime import datetime
 from uuid import UUID
 
 import construct as cs
+from construct_typed import TEnum
 
 from . import fields
 from .base import Struct, field
 from .inode import InodeItem
 from .key import Key
 
-__all__ = ['RootItem']
+__all__ = [
+    'RootItemFlag',
+    'RootItem',
+]
+
+
+class RootItemFlag(fields.EnumBase):
+    SUBVOL_RDONLY = (1 << 0)
 
 
 class RootItem(Struct):
@@ -19,7 +27,7 @@ class RootItem(Struct):
     byte_limit: int = field(cs.Int64ul)
     bytes_used: int = field(cs.Int64ul)
     last_snapshot: int = field(cs.Int64ul)
-    flags: int = field(cs.Int64ul)
+    flags: int = field(TEnum(cs.Int64ul, RootItemFlag))
     refs: int = field(cs.Int32ul)
     drop_progress: Key = field(Key)
     drop_level: int = field(cs.Int8ul)
