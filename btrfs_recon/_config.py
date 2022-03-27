@@ -10,7 +10,7 @@ DB_SHELL_EXTRA_IMPORTS = [
     ('sqlalchemy', ('orm', 'func')),
     {'pg': 'sqlalchemy.dialects.postgresql'},
     ('btrfs_recon', ('structure', 'parsing')),
-    ('btrfs_recon.persistence.models', 'fields'),
+    ('btrfs_recon.persistence', 'fields'),
     ('btrfs_recon.persistence.serializers.registry', '*'),
 ]
 

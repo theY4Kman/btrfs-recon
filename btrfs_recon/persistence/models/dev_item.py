@@ -4,6 +4,8 @@ import sqlalchemy.dialects.postgresql as pg
 from .base import BaseStruct
 from .. import fields
 
+__all__ = ['DevItem']
+
 
 class DevItem(BaseStruct):
     devid = sa.Column(fields.uint8, nullable=False)

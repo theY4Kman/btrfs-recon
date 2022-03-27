@@ -5,7 +5,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import declarative_mixin, declared_attr
 
 from btrfs_recon.structure import KeyType
-from . import fields
+from .. import fields
 from .base import BaseStruct
 
 __all__ = [

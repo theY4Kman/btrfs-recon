@@ -10,6 +10,11 @@ from btrfs_recon import structure
 from .base import BaseStruct
 from .. import fields
 
+__all__ = [
+    'ChunkItem',
+    'Stripe',
+]
+
 
 class ChunkItem(BaseStruct):
     length = sa.Column(fields.uint8, nullable=False)

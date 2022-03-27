@@ -1,7 +1,6 @@
 from typing import Any
 
-from marshmallow import post_load, pre_load
-from marshmallow_sqlalchemy import auto_field
+from marshmallow import pre_load
 
 from btrfs_recon import structure
 from btrfs_recon.persistence import models

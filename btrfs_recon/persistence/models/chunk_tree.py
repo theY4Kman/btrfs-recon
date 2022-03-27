@@ -12,7 +12,7 @@ from btrfs_recon import structure
 from btrfs_recon.types import DevId, PhysicalAddress
 from btrfs_recon.util.properties import classproperty
 from btrfs_recon.util.chunk_cache import ChunkTreeCache
-from . import fields
+from .. import fields
 from ._views import MaterializedView
 
 __all__ = ['ChunkTree']
