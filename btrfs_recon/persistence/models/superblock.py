@@ -61,9 +61,9 @@ class Superblock(BaseStruct):
     metadata_uuid: orm.Mapped[uuid.UUID] = sa.Column(pg.UUID, nullable=False)
 
     dev_item_id: orm.Mapped[int] = sa.Column(sa.ForeignKey('dev_item.id'), nullable=False)
-    dev_item: orm.Mapped[DevItem] = orm.relationship('DevItem')
+    dev_item: orm.Mapped['DevItem'] = orm.relationship('DevItem')
 
-    sys_chunks: orm.Mapped[SysChunk] = orm.relationship('SysChunk', back_populates='superblock', uselist=True)
+    sys_chunks: orm.Mapped['SysChunk'] = orm.relationship('SysChunk', back_populates='superblock', uselist=True)
 
 
 class SysChunk(Keyed, BaseStruct):
@@ -71,4 +71,4 @@ class SysChunk(Keyed, BaseStruct):
     superblock = orm.relationship(Superblock, uselist=False)
 
     chunk_id: orm.Mapped[int] = sa.Column(sa.ForeignKey('chunk_item.id'), nullable=False)
-    chunk: orm.Mapped[ChunkItem] = orm.relationship('ChunkItem', uselist=False)
+    chunk: orm.Mapped['ChunkItem'] = orm.relationship('ChunkItem', uselist=False)

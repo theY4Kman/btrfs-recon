@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
-from sqlalchemy import orm as orm
+from sqlalchemy import orm
 
 from .. import fields
 from .base import BaseModel
@@ -26,7 +26,7 @@ class Address(BaseModel):
     struct_id = sa.Column(sa.Integer)
     struct = fields.generic_relationship(struct_type, struct_id)
 
-    device: orm.Mapped[Device] = orm.relationship('Device', lazy='selectin')
+    device: orm.Mapped['Device'] = orm.relationship('Device', lazy='selectin')
 
     __table_args__ = (
         sa.UniqueConstraint(

@@ -22,7 +22,7 @@ class ChunkItem(BaseStruct):
     num_stripes = sa.Column(fields.uint2, nullable=False)
     sub_stripes = sa.Column(fields.uint2, nullable=False)
 
-    stripes: orm.Mapped[Stripe] = orm.relationship(
+    stripes: orm.Mapped['Stripe'] = orm.relationship(
         'Stripe', back_populates='chunk_item', lazy='joined'
     )
 
@@ -36,7 +36,7 @@ class ChunkItem(BaseStruct):
 
 class Stripe(BaseStruct):
     chunk_item_id: orm.Mapped[int] = sa.Column(sa.ForeignKey(ChunkItem.id, ondelete='CASCADE'), nullable=False)
-    chunk_item: orm.Mapped[ChunkItem] = orm.relationship(ChunkItem, back_populates='stripes')
+    chunk_item: orm.Mapped['ChunkItem'] = orm.relationship(ChunkItem, back_populates='stripes')
 
     devid = sa.Column(fields.uint8, nullable=False)
     offset = sa.Column(fields.uint8, nullable=False)

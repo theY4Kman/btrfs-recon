@@ -30,9 +30,9 @@ class TreeNode(BaseStruct):
 
     is_leaf: orm.Mapped[bool] = sa.Column(sa.Computed(level == 0), type_=sa.Boolean, nullable=False)
 
-    leaf_items: orm.Mapped[LeafItem] = orm.relationship('LeafItem', back_populates='parent', uselist=True)
-    key_ptrs: orm.Mapped[KeyPtr] = orm.relationship('KeyPtr', foreign_keys='KeyPtr.parent_id', back_populates='parent', uselist=True)
-    parent_key_ptrs: orm.Mapped[KeyPtr] = orm.relationship('KeyPtr', foreign_keys='KeyPtr.ref_node_id', viewonly=True, uselist=True)
+    leaf_items: orm.Mapped['LeafItem'] = orm.relationship('LeafItem', back_populates='parent', uselist=True)
+    key_ptrs: orm.Mapped['KeyPtr'] = orm.relationship('KeyPtr', foreign_keys='KeyPtr.parent_id', back_populates='parent', uselist=True)
+    parent_key_ptrs: orm.Mapped['KeyPtr'] = orm.relationship('KeyPtr', foreign_keys='KeyPtr.ref_node_id', viewonly=True, uselist=True)
 
     __table_args__ = (
         # Used to order LeafItems by generation with Index-Only Scans
@@ -42,18 +42,18 @@ class TreeNode(BaseStruct):
 
 class KeyPtr(Keyed, BaseStruct):
     parent_id: orm.Mapped[int] = sa.Column(sa.ForeignKey(TreeNode.id), nullable=False)
-    parent: orm.Mapped[TreeNode] = orm.relationship(TreeNode, foreign_keys=parent_id)
+    parent: orm.Mapped['TreeNode'] = orm.relationship(TreeNode, foreign_keys=parent_id)
 
     blockptr = sa.Column(fields.uint8, nullable=False)
     generation = sa.Column(fields.uint8, nullable=False)
 
     ref_node_id: orm.Mapped[int] = sa.Column(sa.ForeignKey(TreeNode.id))
-    ref_node: orm.Mapped[TreeNode] = orm.relationship(TreeNode, foreign_keys=ref_node_id)
+    ref_node: orm.Mapped['TreeNode'] = orm.relationship(TreeNode, foreign_keys=ref_node_id)
 
 
 class LeafItem(Keyed, BaseStruct):
     parent_id: orm.Mapped[int] = sa.Column(sa.ForeignKey(TreeNode.id), nullable=False)
-    parent: orm.Mapped[TreeNode] = orm.relationship(TreeNode, lazy='selectin')
+    parent: orm.Mapped['TreeNode'] = orm.relationship(TreeNode, lazy='selectin')
 
     offset = sa.Column(fields.uint4, nullable=False)
     size = sa.Column(fields.uint4, nullable=False)

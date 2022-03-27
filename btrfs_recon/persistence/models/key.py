@@ -21,7 +21,7 @@ class Key(BaseStruct):
 
     struct_type = sa.Column(sa.String)
     struct_id = sa.Column(sa.Integer)
-    struct = fields.generic_relationship(struct_type, struct_id)
+    struct: orm.Mapped[BaseStruct] = fields.generic_relationship(struct_type, struct_id)
 
     __table_args__ = (
         # Enforce a one-to-one rel between a key and the struct it's attached to

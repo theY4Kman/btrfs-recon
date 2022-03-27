@@ -26,7 +26,7 @@ class Filesystem(BaseModel):
     fsid: orm.Mapped[uuid.UUID] = sa.Column(pg.UUID)
     label = sa.Column(sa.String, unique=True)
 
-    devices: orm.Mapped[Device] = orm.relationship(
+    devices: orm.Mapped['Device'] = orm.relationship(
         'Device', secondary=FilesystemDevice.__table__, uselist=True, lazy='selectin'
     )
 
