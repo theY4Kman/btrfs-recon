@@ -2,12 +2,14 @@ import asyncio
 import uuid
 from typing import AsyncIterable, Collection
 
+import aiomultiprocess
 import asyncclick as click
 import construct as cs
 import sqlalchemy as sa
 from aiomultiprocess import Pool
 from aiomultiprocess.types import ProxyException
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import ddl
 from tqdm import tqdm
 from tui_progress import timed_subtask
 
@@ -321,9 +323,6 @@ async def reparse_fs(
     fs: Filesystem = (await session.execute(q)).scalar_one()
     device_ids = [d.id for d in fs.devices]
 
-    # TODO:
-    #   1.
-
     if not (key or all_):
         return
 
@@ -377,23 +376,103 @@ async def reparse_fs(
 
     q = q.filter(sa.or_(*filters))
 
-    total = (await session.execute(sa.select(sa.func.count()).select_from(q))).scalar()
-
-    pbar = tqdm(unit='struct', total=total)
+    pbar = tqdm(
+        unit='struct',
+        maxinterval=2,
+        dynamic_ncols=True,
+    )
     pbar.n = 0
 
     if parallel:
+        # Throw all IDs in a temp table, for simpler querying
+        temp_items_table = sa.Table(
+            'temp_reparse_items', models.Base.metadata,
+            sa.Column('leaf_item_id', sa.Integer, primary_key=True),
+            prefixes=['TEMPORARY'],
+        )
+        await session.execute(ddl.CreateTable(temp_items_table))
+        await session.execute(
+            sa.insert(temp_items_table)
+            .from_select([temp_items_table.c.leaf_item_id], q)
+        )
+
+        aiomultiprocess.set_start_method('fork')
+
         async with Pool(
             processes=workers,
             childconcurrency=1,
             maxtasksperchild=qsize,
         ) as pool:
-            results = pool.starmap(_multiprocess_leaf_item, await session.execute(q))
+            queue = asyncio.Queue(maxsize=qsize)
+            pending_queue = asyncio.Queue(maxsize=qsize)
+            failures: list[tuple[int, str]] = []
+            finished_submitting = asyncio.Event()
 
-            async for result in results:
+            async def _process_and_print(leaf_item_id: int):
+                if not pool.running:
+                    return
+
+                args = (leaf_item_id,)
+                try:
+                    result = await pool.apply(_multiprocess_leaf_item, args=args)
+                except ProxyException as e:
+                    tb = e.args[0]
+                    failures.append(args + (tb,))
+                    pbar.write(f'Failed to process {args}:\n\n' + tb)
+                else:
+                    if result:
+                        pbar.write(result)
+
                 pbar.update(1)
-                if result:
-                    pbar.write(result)
+
+                # Remove an item from the pending queue, freeing the queue master
+                # to retrieve another item
+                pending_queue.get_nowait()
+                pending_queue.task_done()
+
+            async def queue_master():
+                wait_finished_submitting = asyncio.create_task(
+                    finished_submitting.wait(), name='wait until all leaf items have been submitted'
+                )
+
+                while pool.running and (not queue.empty() or not finished_submitting.is_set()):
+                    queue_get = asyncio.create_task(queue.get(), name='get leaf item from queue')
+                    done, pending = await asyncio.wait(
+                        (queue_get, wait_finished_submitting), return_when=asyncio.FIRST_COMPLETED
+                    )
+                    if finished_submitting.is_set() and queue.empty():
+                        break
+
+                    if queue_get in done:
+                        leaf_item_id = queue_get.result()
+                        await pending_queue.put(leaf_item_id)
+                        asyncio.create_task(_process_and_print(leaf_item_id))
+
+                await pending_queue.join()
+
+            processor = asyncio.create_task(queue_master(), name='queue processor')
+
+            async def calculate_total():
+                total = (await session.execute(
+                    sa.select(sa.func.count())
+                    .select_from(temp_items_table)
+                )).scalar()
+                pbar.total = total
+
+            asyncio.create_task(calculate_total())
+
+            res = await session.execute(sa.select(temp_items_table.c.leaf_item_id))
+            for leaf_item_id in res.scalars():
+                await queue.put(leaf_item_id)
+            finished_submitting.set()
+
+            await processor
+
+            if failures:
+                print(f'Encountered {len(failures)} failure(s)\n\n')
+                for (leaf_item_id, tb) in failures:
+                    print(f'Leaf Item {leaf_item_id}', '\n', tb, '\n\n')
+                print(f'Encountered {len(failures)} failure(s)\n\n')
 
     else:  # not parallel
         q = q.with_only_columns(models.LeafItem)
