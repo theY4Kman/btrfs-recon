@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import partial
-from typing import Any, Callable, Optional, Type, TYPE_CHECKING
+from typing import Any, BinaryIO, Callable, Optional, Type, TYPE_CHECKING, TypeVar
 
 import construct as cs
 from construct_typed import Construct, Context, csfield, DataclassMixin, DataclassStruct
@@ -65,6 +65,8 @@ class _StructMeta(type):
 
 _TYPED_STRUCT_AS_STRUCT_KEY = '__struct'
 
+StructT = TypeVar('StructT', bound='Struct')
+
 
 class Struct(DataclassMixin, metaclass=_StructMeta):
     phys_start: int
@@ -77,6 +79,18 @@ class Struct(DataclassMixin, metaclass=_StructMeta):
         if not hasattr(cls, _TYPED_STRUCT_AS_STRUCT_KEY):
             setattr(cls, _TYPED_STRUCT_AS_STRUCT_KEY, DataclassStruct(cls))
         return getattr(cls, _TYPED_STRUCT_AS_STRUCT_KEY)
+
+    @classmethod
+    def build(cls: Type[StructT], obj: StructT, **contextkw) -> bytes:
+        return cls.as_struct().build(obj, **contextkw)
+
+    @classmethod
+    def parse(cls: Type[StructT], data: bytes, **contextkw) -> StructT:
+        return cls.as_struct().parse(data, **contextkw)
+
+    @classmethod
+    def parse_stream(cls: Type[StructT], stream: BinaryIO, **contextkw) -> StructT:
+        return cls.as_struct().parse_stream(stream, **contextkw)
 
     def __class_getitem__(cls, count) -> Construct:
         return cls.as_struct()[count]
