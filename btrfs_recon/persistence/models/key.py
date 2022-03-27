@@ -28,10 +28,10 @@ class Key(BaseStruct):
         sa.UniqueConstraint(struct_type, struct_id, name='key_struct_ref_uniq'),
 
         # Lookup indices
-        sa.Index('key_lookup_struct', struct_type, struct_id),
-        sa.Index('key_lookup_ty', ty),
-        sa.Index('key_lookup_objectid', objectid),
-        sa.Index('key_lookup_offset', offset),
+        sa.Index('key_lookup_struct', struct_type, struct_id, postgresql_include=['id']),
+        sa.Index('key_lookup_ty', ty, postgresql_include=['id']),
+        sa.Index('key_lookup_objectid', objectid, postgresql_include=['id']),
+        sa.Index('key_lookup_offset', offset, postgresql_include=['id']),
     )
 
 
