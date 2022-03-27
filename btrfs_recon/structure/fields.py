@@ -1,3 +1,4 @@
+import binascii
 import typing
 import uuid
 from datetime import datetime
@@ -22,7 +23,7 @@ class UUIDAdapter(cs.Adapter):
         return uuid.UUID(bytes=bytes(obj))
 
     def _encode(self, obj: uuid.UUID, context, path) -> bytes:
-        return obj.bytes if context.swapped else obj.bytes_le
+        return obj.bytes_le if getattr(context, 'swapped', False) else obj.bytes
 
 
 UUID = UUIDAdapter(cs.Int8ul[BTRFS_UUID_SIZE])
@@ -80,3 +81,33 @@ class EnumBase(cst.EnumBase):
         if isinstance(value, str):
             return cls.__members__[value]
         return super()._missing_(value)
+
+
+class Checksum(cs.Checksum):
+    """Checksum field allowing dynamic building of checksums and invalid checksums to be parsed"""
+
+    def __init__(self, checksumfield, hashfunc, bytesfunc, allow_invalid: bool = True):
+        super().__init__(checksumfield, hashfunc, bytesfunc)
+        self.allow_invalid = allow_invalid
+
+    def _parse(self, stream, context, path):
+        hash1 = self.checksumfield._parsereport(stream, context, path)
+        hash2 = self.hashfunc(self.bytesfunc(context))
+        if not self.allow_invalid and hash1 != hash2:
+            raise cs.ChecksumError(
+                "wrong checksum, read %r, computed %r" % (
+                    hash1 if not isinstance(hash1, bytes) else binascii.hexlify(hash1),
+                    hash2 if not isinstance(hash2, bytes) else binascii.hexlify(hash2), ),
+                path=path
+            )
+        return hash1
+
+
+class Reparse(cs.Rebuild):
+    """Field which defers to subcon for parsing _and_ building"""
+
+    def __init__(self, subcon):
+        super().__init__(subcon, None)
+
+    def _build(self, obj, stream, context, path):
+        return self.subcon._parsereport(stream, context, path)

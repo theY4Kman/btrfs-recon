@@ -1,7 +1,12 @@
+from __future__ import annotations
+
+import dataclasses
+import struct
 from uuid import UUID
 
 import construct as cs
 from construct_typed import TEnum
+from crc32c import crc32c
 
 from btrfs_recon.constants import BTRFS_CSUM_SIZE, BTRFS_LABEL_SIZE, BTRFS_MAGIC
 
@@ -33,7 +38,9 @@ class SysChunk(Struct):
 
 
 class Superblock(Struct):
-    csum: bytes = field(cs.Hex(cs.Bytes(BTRFS_CSUM_SIZE)))
+    _csum_offset: int = field(cs.Tell)
+    _csum_space: bytes = field(cs.Padding(BTRFS_CSUM_SIZE))
+    _csum_data_start: int = field(cs.Tell)
     fsid: UUID = field(fields.FSID)
     bytenr: int = field(cs.Int64ul)
     flags: SuperblockFlags = field(TEnum(cs.Int64ul, SuperblockFlags))
@@ -74,3 +81,22 @@ class Superblock(Struct):
     #: Future expansion
     _reserved: int = field(cs.Int64ul[28])
     sys_chunks: list = field(SysChunk[1])
+    _parsed_end: int = field(cs.Tell)
+    _unparsed_data: bytes = field(cs.Bytes(cs.this._csum_offset + 0x1000 - cs.this._parsed_end))
+    csum_data: bytes = field(cs.Pointer(
+        cs.this._csum_data_start,
+        fields.Reparse(cs.RawCopy(cs.Padding(0x1000 - BTRFS_CSUM_SIZE))),
+    ))
+    csum: bytes = field(
+        cs.Pointer(
+            cs.this.phys_start,
+            fields.Checksum(
+                cs.Hex(cs.Bytes(BTRFS_CSUM_SIZE)),
+                lambda data: struct.pack('<L', crc32c(data)) + b'\x00'*(BTRFS_CSUM_SIZE-4),
+                cs.this.csum_data.data,
+            )
+        )
+    )
+
+    # TODO: recalculate checksum with ALL changed fields upon build
+    # TODO: hide any checksum-data-related-only fields (any padded/padding)
