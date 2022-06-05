@@ -42,19 +42,8 @@ class Device(BaseModel):
         else:
             return self.path
 
-    def open(self, read: bool = True, write: bool = False, buffering=-1) -> BinaryIO:
-        mode: OpenBinaryMode
-
-        match read, write:
-            case True, False:
-                mode = 'rb'
-            case True, True:
-                mode = 'r+b'
-            case False, True:
-                mode = 'wb'
-            case _:
-                raise ValueError('One of "read" or "write" must be True')
-
+    def open(self, write: bool = False, buffering=-1) -> BinaryIO:
+        mode = 'r+b' if write else 'rb'
         return Path(self.path).open(mode=mode, buffering=buffering)
 
     def parse_superblock(

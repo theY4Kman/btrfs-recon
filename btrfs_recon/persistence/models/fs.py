@@ -39,10 +39,10 @@ class Filesystem(BaseModel):
         )
 
     def open_all(
-        self, *, read: bool = True, write: bool = False, buffering: int = -1
+        self, *, write: bool = False, buffering: int = -1
     ) -> list[BinaryIO]:
         """Open file handles to all device images"""
         return [
-            device.open(read=read, write=write, buffering=buffering)
+            device.open(write=write, buffering=buffering)
             for device in self.devices
         ]

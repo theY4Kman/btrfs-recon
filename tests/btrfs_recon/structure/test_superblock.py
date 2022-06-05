@@ -2,7 +2,7 @@ import dataclasses
 from pathlib import Path
 from uuid import UUID
 
-from pytest_assert_utils import assert_model_attrs
+from pytest_assert_utils import assert_model_attrs, util
 from pytest_lambda import lambda_fixture
 
 from btrfs_recon.structure import Superblock
@@ -58,6 +58,9 @@ def test_superblock_reversible_parse(raw_superblock):
     actual = Superblock.build(Superblock.parse(raw_superblock))
     assert expected == actual
 
+    reparsed_sb = Superblock.parse(actual)
+    assert_model_attrs(reparsed_sb, SUPERBLOCK_VALUES)
+
 
 def test_superblock_changes(raw_superblock):
     changed_sb = Superblock.parse(raw_superblock)
@@ -66,7 +69,12 @@ def test_superblock_changes(raw_superblock):
     raw_changed = Superblock.build(changed_sb)
     reparsed_sb = Superblock.parse(raw_changed)
 
-    changed_fields = dict(SUPERBLOCK_VALUES)
-    del changed_fields['csum']
-    changed_fields['chunk_root_generation'] = 2906220
+    changed_fields = {
+        **SUPERBLOCK_VALUES,
+        'csum': util.Any(bytes),
+        'chunk_root_generation': 2906220,
+    }
     assert_model_attrs(reparsed_sb, changed_fields)
+
+    csum = reparsed_sb.csum
+    assert csum[:4] != b'\x00'*4

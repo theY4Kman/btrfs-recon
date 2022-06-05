@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 import struct
 from uuid import UUID
 
@@ -89,7 +88,7 @@ class Superblock(Struct):
     ))
     csum: bytes = field(
         cs.Pointer(
-            cs.this.phys_start,
+            cs.this._csum_offset,
             fields.Checksum(
                 cs.Hex(cs.Bytes(BTRFS_CSUM_SIZE)),
                 lambda data: struct.pack('<L', crc32c(data)) + b'\x00'*(BTRFS_CSUM_SIZE-4),
@@ -98,5 +97,4 @@ class Superblock(Struct):
         )
     )
 
-    # TODO: recalculate checksum with ALL changed fields upon build
     # TODO: hide any checksum-data-related-only fields (any padded/padding)

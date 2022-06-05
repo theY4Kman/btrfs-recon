@@ -92,14 +92,15 @@ class Checksum(cs.Checksum):
 
     def _parse(self, stream, context, path):
         hash1 = self.checksumfield._parsereport(stream, context, path)
-        hash2 = self.hashfunc(self.bytesfunc(context))
-        if not self.allow_invalid and hash1 != hash2:
-            raise cs.ChecksumError(
-                "wrong checksum, read %r, computed %r" % (
-                    hash1 if not isinstance(hash1, bytes) else binascii.hexlify(hash1),
-                    hash2 if not isinstance(hash2, bytes) else binascii.hexlify(hash2), ),
-                path=path
-            )
+        if not self.allow_invalid:
+            hash2 = self.hashfunc(self.bytesfunc(context))
+            if hash1 != hash2:
+                hash1_repr = hash1 if not isinstance(hash1, bytes) else binascii.hexlify(hash1)
+                hash2_repr = hash2 if not isinstance(hash2, bytes) else binascii.hexlify(hash2)
+                raise cs.ChecksumError(
+                    f'wrong checksum, read {hash1_repr!r}, computed {hash2_repr!r}',
+                    path=path,
+                )
         return hash1
 
 

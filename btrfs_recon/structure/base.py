@@ -85,6 +85,10 @@ class Struct(DataclassMixin, metaclass=_StructMeta):
         return cls.as_struct().build(obj, **contextkw)
 
     @classmethod
+    def build_stream(cls: Type[StructT], obj: StructT, stream: BinaryIO, **contextkw) -> None:
+        cls.as_struct().build_stream(obj, stream, **contextkw)
+
+    @classmethod
     def parse(cls: Type[StructT], data: bytes, **contextkw) -> StructT:
         return cls.as_struct().parse(data, **contextkw)
 

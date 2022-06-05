@@ -1,5 +1,6 @@
 import asyncio
 import uuid
+from pathlib import Path
 from typing import AsyncIterable, Collection
 
 import aiomultiprocess
@@ -135,7 +136,7 @@ async def scan_fs(
         if devid and device.devid not in devid:
             continue
 
-        with device.open(read=True) as fp:
+        with device.open() as fp:
             log, headers = await find_nodes(
                 fp,
                 fsid=fs.fsid,

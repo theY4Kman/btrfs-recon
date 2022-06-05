@@ -108,7 +108,7 @@ class BaseStruct(BaseModel):
         device = address.device
 
         if fp is None:
-            ctx = device.open(read=True)
+            ctx = device.open()
         else:
             ctx = nullcontext(fp)
 
@@ -119,12 +119,49 @@ class BaseStruct(BaseModel):
         self, *, fp: BinaryIO = None, session: orm.Session | None = _SESSION_NOT_SET, **contextkw
     ) -> structure.Struct:
         """Update the current instance with info parsed from the on-disk structure"""
+        struct = self.parse_disk(fp=fp, **contextkw)
+        self.update_from_struct(struct, session=session)
+        return struct
+
+    def update_from_struct(
+        self, struct: structure.Struct, *, session: orm.Session | None = _SESSION_NOT_SET
+    ) -> None:
+        """Update the current instance with info from a struct"""
         if session is _SESSION_NOT_SET:
             session = orm.base.instance_state(self).session
 
-        struct = self.parse_disk(fp=fp, **contextkw)
         struct.to_model(instance=self, session=session, context={'device': self.address.device})
-        return struct
+
+    def write_disk(
+        self,
+        struct: structure.Struct,
+        *,
+        fp: BinaryIO = None,
+        update_model: bool = True,
+        session: orm.Session | None = _SESSION_NOT_SET,
+        **contextkw,
+    ) -> int:
+        """Write the structure back to disk"""
+        address = self.address
+        phys = address.phys
+        device = address.device
+
+        #: We build the bytes in memory, to provide a final count of written bytes
+        raw_bytes = struct.build(struct, **contextkw)
+
+        if fp is None:
+            ctx = device.open(write=True)
+        else:
+            ctx = nullcontext(fp)
+
+        with ctx as stream:
+            stream.seek(phys)
+            bytes_written = stream.write(raw_bytes)
+
+        if update_model:
+            self.update_from_struct(struct, session=session)
+
+        return bytes_written
 
 
 class BaseLeafItemData(BaseStruct):
