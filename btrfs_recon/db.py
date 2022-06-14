@@ -4,6 +4,8 @@ import sqlalchemy as sa
 import sqlalchemy.orm as orm
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
+from btrfs_recon import settings
+
 # Load our models
 import btrfs_recon.persistence  # type: ignore
 
@@ -14,11 +16,12 @@ __all__ = [
     'SyncSession',
 ]
 
-engine = create_async_engine('postgresql+psycopg://btrfs_recon:btrfs_recon@127.0.0.1:5436/btrfs_recon',
+
+engine = create_async_engine(settings.DATABASE_URL,
                              pool_size=20, max_overflow=0)
 Session = orm.sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
-sync_engine = sa.create_engine('postgresql+psycopg://btrfs_recon:btrfs_recon@127.0.0.1:5436/btrfs_recon')
+sync_engine = sa.create_engine(settings.DATABASE_URL)
 SyncSession = orm.sessionmaker(sync_engine, expire_on_commit=False)
 
 

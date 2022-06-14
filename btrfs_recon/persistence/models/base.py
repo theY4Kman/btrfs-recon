@@ -12,7 +12,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import declarative_base, declared_attr
 from sqlalchemy_repr import PrettyRepr, Repr
 
-from btrfs_recon import _config, structure
+from btrfs_recon import settings, structure
 from btrfs_recon.parsing import parse_at
 
 if TYPE_CHECKING:
@@ -28,9 +28,9 @@ __all__ = [
     'BaseLeafItemData',
 ]
 
-repr_cls = PrettyRepr if _config.MODEL_REPR_PRETTY else Repr
+repr_cls = PrettyRepr if settings.MODEL_REPR_PRETTY else Repr
 
-if _config.MODEL_REPR_ID:
+if settings.MODEL_REPR_ID:
     class IncludeIdRepr(repr_cls):
         def _iter_attrs(self, obj) -> Generator[tuple[str, Any], None, None]:
             yield '_id', id(obj)

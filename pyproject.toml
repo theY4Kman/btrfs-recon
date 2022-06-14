@@ -21,6 +21,7 @@ inflection = "^0.5.1"
 intervaltree = "^3.1.0"
 marshmallow-sqlalchemy = "^0.27.0"
 psycopg = {extras = ["binary"], version = "^3.0.7"}
+pydantic = "^1.9.1"
 python-dateutil = "^2.8.2"
 sqlalchemy = {url = "https://github.com/sqlalchemy/sqlalchemy/tarball/df056af49c51dcbcd70eb13ead5c3d8588c08235"}
 sqlalchemy-repr = "^0.0.2"

@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import ClauseElement
 from sqlalchemy.sql.compiler import SQLCompiler
 
-from btrfs_recon import _config
+from btrfs_recon import settings
 from btrfs_recon.persistence.models import Base
 from btrfs_recon.types import ImportItem
 from .base import db, pass_session
@@ -168,7 +168,7 @@ async def run_shell(
         import_group("Models", sorted(models_by_module.items(), key=lambda t: t[0]))
 
     def import_other() -> None:
-        import_group("Other Imports", _config.DB_SHELL_EXTRA_IMPORTS)
+        import_group("Other Imports", settings.DB_SHELL_EXTRA_IMPORTS)
 
     import_models()
     import_other()
@@ -242,7 +242,7 @@ def install_sqlalchemy_sql_printer() -> None:
             sql = str(statement)
 
         if sqlparse:
-            sql = sqlparse.format(sql, **_config.DB_SHELL_SQLPARSE_FORMAT_KWARGS)
+            sql = sqlparse.format(sql, **settings.DB_SHELL_SQLPARSE_FORMAT_KWARGS)
 
         sql = pygments.highlight(sql, sql_lexer, sql_formatter)
         print_chunked(sql)
